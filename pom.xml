@@ -41,7 +41,28 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-	</dependencies>
+
+<!--		<dependency>
+			<artifactId>algs4artifact</artifactId>
+			<groupId>algs4</groupId>
+			<scope>system</scope>
+			<systemPath>${basedir}/lib/algs4.jar</systemPath>
+			<type>jar</type>
+		</dependency>-->
+
+		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.8.6</version>
+		</dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+        </dependency>
+
+
+    </dependencies>
 
 	<build>
 		<plugins>
