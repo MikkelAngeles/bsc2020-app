@@ -13,6 +13,7 @@ public class DataModel implements IDataModel {
     private SimpleEdge[] edges;
     private Bag<SimpleEdge>[] adj;
 
+    private int[] landmarks;
     private int edgesCounter;
     private float[] distances;
     private int[] travelTimes;
@@ -158,6 +159,18 @@ public class DataModel implements IDataModel {
     public EdgePropValue getProp(int index, EdgePropKey type) {
         if(!hasPropType(index, type)) return null;
         return propMap.get(index).get(type);
+    }
+
+    public void generateRandomLandmarks(int count) {
+        landmarks = new int[count];
+        var rnd = new Random();
+        for(var i = 0; i < count; i++) {
+            landmarks[i] = rnd.nextInt(V);
+        }
+    }
+
+    public int[] getLandmarks() {
+        return landmarks;
     }
 
     @Override

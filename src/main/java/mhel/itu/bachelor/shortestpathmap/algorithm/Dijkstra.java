@@ -8,26 +8,20 @@ public class Dijkstra implements IShortestPathAlgorithm {
     private IEdge[] edgeTo;
     private float[] distTo;
     private IndexMinPQ<Float> pq;           // priority queue of vertices
-    private HashSet<Integer> visited;
-    private Queue<Integer> visitedQueue;
-    private DataModel dataModel;
+    private Queue<Integer> visited;
+    private IDataModel dataModel;
     private RouteQuery query;
 
     public Dijkstra() { }
 
-    public void load(SimpleGraph G, DataModel dm, int source, int target) {
-
-    }
-
     @Override
-    public void perform(SimpleGraph G, DataModel dm, RouteQuery query) {
+    public void perform(SimpleGraph G, IDataModel dm, RouteQuery query) {
         for (var e : G.edges()) {
             if(e == null) continue;
             if (dm.getDist(e.index()) < 0)
                 throw new IllegalArgumentException("edge " + e + " has negative weight");
         }
-        visited = new HashSet<>();
-        visitedQueue = new LinkedList<>();
+        visited = new LinkedList<>();
         distTo = new float[G.getV()];          //Assign array size from number of vertices in graph
         edgeTo = new SimpleEdge[G.getV()];     //Assign array size from number of vertices in graph
         this.dataModel = dm;
@@ -73,15 +67,9 @@ public class Dijkstra implements IShortestPathAlgorithm {
         return accum;
     }
 
-    @Override
-    public void load(IGraph G, IVertex s, IVertex t, Set<RouteCriteriaEvaluationType> c) {
-
-    }
-
     private void relax(IEdge e, float weight) {
         int v = e.from().I(), w = e.to().I();
         visited.add(w);
-        visitedQueue.add(w);
         if (distTo[w] > distTo[v] + weight) {
             distTo[w] = distTo[v] + weight;
             edgeTo[w] = e;
@@ -116,17 +104,6 @@ public class Dijkstra implements IShortestPathAlgorithm {
 
     @Override
     public Queue<Integer> getVisited() {
-        return visitedQueue;
-    }
-
-
-    @Override
-    public void setHeuristicWeight(float heuristicWeight) {
-
-    }
-
-    @Override
-    public long getElapsed() {
-        return 0;
+        return visited;
     }
 }

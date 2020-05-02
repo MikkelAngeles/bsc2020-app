@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useContext} from 'react';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -13,6 +13,8 @@ import PersonIcon from '@material-ui/icons/Person';
 import AddIcon from '@material-ui/icons/Add';
 import Typography from '@material-ui/core/Typography';
 import { blue } from '@material-ui/core/colors';
+import {MapContext} from "./MapContext";
+import {algorithms, algorithmTitle, graphs, graphTitle} from "./selectionProperties";
 
 const files = [
     {
@@ -82,13 +84,16 @@ const useStyles = makeStyles({
 
 function SimpleDialog(props) {
     const classes = useStyles();
-    const { onClose, selectedValue, open } = props;
-
+    const { onClose,  open } = props;
+    const model = useContext(MapContext);
+    const g = graphs;
+    const selected = model.selectedAlgorithm;
     const handleClose = () => {
-        onClose(selectedValue);
+        onClose();
     };
 
     const handleListItemClick = (value) => {
+        model.setSelectedGraph(value);
         onClose(value);
     };
 
@@ -96,8 +101,8 @@ function SimpleDialog(props) {
         <Dialog onClose={handleClose} aria-labelledby="simple-dialog-title" open={open}>
             <DialogTitle id="simple-dialog-title">Select graph</DialogTitle>
             <List>
-                {files.map((f,k) => (
-                    <ListItem button onClick={() => handleListItemClick(f.id)} key={f.id}>
+                {g.map((f,k) => (
+                    <ListItem button onClick={() => handleListItemClick(f.id)} key={f.id} selected={selected === f.id}>
                         <ListItemAvatar>
                             <Avatar className={classes.avatar}>
                                 <PersonIcon />
@@ -115,31 +120,27 @@ function SimpleDialog(props) {
 SimpleDialog.propTypes = {
     onClose: PropTypes.func.isRequired,
     open: PropTypes.bool.isRequired,
-    selectedValue: PropTypes.string.isRequired,
+    selected: PropTypes.string.isRequired,
 };
 
 export default function SelectFileDialog(props) {
     const [open, setOpen] = React.useState(false);
-    const {selected, onSelect} = props;
+    const model = useContext(MapContext);
 
     const handleClickOpen = () => {
         setOpen(true);
     };
 
     const handleClose = (value) => {
-        if(value === 6) {
-
-        }
         setOpen(false);
-        onSelect(value);
     };
 
     return (
         <div>
             <Button variant="outlined" color="primary" onClick={handleClickOpen}>
-                Select graph
+                {graphTitle(model.selectedGraph)}
             </Button>
-            <SimpleDialog selectedValue={selected} open={open} onClose={handleClose} />
+            <SimpleDialog selected={model.selectedGraph} open={open} onClose={handleClose} />
         </div>
     );
 }

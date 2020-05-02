@@ -1,22 +1,29 @@
-import React, {useEffect, useRef, useState} from 'react';
-import MapGL, {Layer, Source} from 'react-map-gl';
-import axios from "axios";
+import React, {useContext, useEffect, useRef, useState} from 'react';
+import MapGL, {Layer, LinearInterpolator, WebMercatorViewport, Source} from 'react-map-gl';
 import LinearProgress from "@material-ui/core/LinearProgress";
+import {SelectionContext} from "./SelectionContext";
+import CircularProgress from "@material-ui/core/CircularProgress";
+import Backdrop from "@material-ui/core/Backdrop";
+import {makeStyles} from "@material-ui/styles";
+import {MapContext} from "./MapContext";
 
 const accessToken = "pk.eyJ1IjoibWlra2VsYW5nZWxlcyIsImEiOiJjazltanR4YWUwMHhqM25xbTNjYTBidzFoIn0.NZCPthWITf6K5AeN8Xwn1Q";
 
-const db = [
-    [10.579150390623285,57.72461531315225],
-    [12.282031249997033,56.09954580268264],
-    [10.732958984373925,54.68328220960388],
-    [8.129199218748925,55.60620642188443],
-    [11.534960937498278,55.36967133830027],
-    [9.370654296873628,56.22190373231677]
-];
+const useStyles = makeStyles((theme) => ({
+    backdrop: {
+        zIndex: 5,
+        color: '#fff',
+    },
+}));
 
 export default function Map (props) {
-    const {toggleGraph = true, toggleLandmarks, toggleVisited, selectedFile} = props;
-    const {lonSearch, latSearch, setLonSearchResults, setLatSearchResults} = props;
+    const model = useContext(SelectionContext);
+    const mapModel = useContext(MapContext);
+
+    const classes = useStyles();
+
+    const {lonSearch, latSearch, setLonSearchResults} = props;
+
     const [viewport, setViewport] = useState({
             width: window.outerWidth,
             height: window.outerHeight + 50,
@@ -25,137 +32,48 @@ export default function Map (props) {
             zoom: 6
     });
 
-    const [source, setSource] = useState(-1);
-    const [target, setTarget] = useState(-1);
-
     const [nearest, setNearest] = useState(buildPoint([]));
-    const [routeFrom, setRouteFrom] = useState(buildPoint([]));
-    const [routeTo, setRouteTo] = useState(buildPoint([]));
-    const [route, setRoute] = useState(buildPoint([]));
-
-    const [landmarks, setLandmarks] = useState(buildLineString(db));
-
-    const [graph, setGraph] = useState(buildLineString([]));
-
-    const [visited, setVisited] = useState(buildLineString([]));
 
     const [graphLoading, setGraphLoading] = useState(false);
 
-    function handleChange(vp) { setViewport(vp); }
-
-    function loadFile() {
-        setGraphLoading(true);
-        let path = 'http://localhost:8080/load';
-        if(selectedFile === 0) {
-            path += '/json'
-        } else if(selectedFile === 1) {
-            path += '/dimacs/nyc'
-        }
-        axios.get(path)
-            .then(function (response) {
-                // handle success
-                if(response.status === 200) handleLoad();
-                console.log(response);
-            })
-            .catch(function (error) {
-                // handle error
-                console.log(error);
-            })
-            .finally(function () {
-                setGraphLoading(false);
-            });
-    }
-
-    function handleLoad() {
-        setGraphLoading(true);
-        axios.get('http://localhost:8080//vertices/trimmed')
-            .then(function (response) {
-                // handle success
-                if(response.data) {
-                    setGraph(buildLineString(response.data));
-                }
-                console.log(response);
-            })
-            .catch(function (error) {
-                // handle error
-                console.log(error);
-            })
-            .finally(function () {
-                setGraphLoading(false);
-            });
-    }
-
-    function getRoute() {
-        if(source === -1|| target === -1) return;
-        setGraphLoading(true);
-        axios.get(`http://localhost:8080/route?from=${source}&to=${target}`)
-            .then(function (response) {
-                // handle success
-                if(response.data) {
-                    setRoute(buildLineString(response.data));
-                    getVisited();
-                }
-                console.log(response);
-            })
-            .catch(function (error) {
-                setGraphLoading(false);
-                console.log(error);
-            })
-    }
-
-    function getVisited() {
-        axios.get(`http://localhost:8080/route/visited`)
-            .then(function (response) {
-                // handle success
-                if(response.data) {
-                    setVisited(buildLineString(response.data));
-                }
-                console.log(response);
-            })
-            .catch(function (error) {
-                // handle error
-                console.log(error);
-            })
-            .finally(function () {
-                setGraphLoading(false);
-            });
+    function handleChange(vp) {
+        setViewport(vp);
     }
 
     function clear() {
-        let point = buildPoint([]);
-        setRoute(buildLineString([]));
-        setVisited(buildLineString([]));
-        setRouteFrom(point);
-        setRouteTo(point);
-        setSource(-1);
-        setTarget(-1)
+        model.clearSelectedPoints();
+        model.setSource(-1);
+        model.setTarget(-1);
+        mapModel.clearRoute();
     }
 
     function getGraph() {
-        return graph.features[0].geometry.coordinates;
+        return mapModel.graph.vertices;
     }
 
     function handleOnClick(e) {
-        //console.log(e);
+        console.log(e);
         let cur = e.lngLat;
         let cur_lng = cur[0];
         let cur_lat = cur[1];
         let G = getGraph();
 
         if(e && e.rightButton) {
-
-            if (routeFrom.features[0].geometry.coordinates.length === 0) {
+            console.log(model.selectedPoints);
+            if (model.selectedPoints.routeFrom.point.length === 0) {
                 let rs =  findNearest(cur_lng, cur_lat, G);
                 if(rs > -1) {
-                    setRouteFrom(buildPoint(G[rs]));
-                    setSource(rs);
+                    //setRouteFrom(buildPoint(G[rs]));
+                    model.setRouteFrom(G[rs], rs);
+                    model.setSource(rs);
                 }
             }
-            else if (routeTo.features[0].geometry.coordinates.length === 0) {
+            else if (model.selectedPoints.routeTo.point.length === 0) {
                 let rs =  findNearest(cur_lng, cur_lat, G);
                 if(rs > -1) {
-                    setRouteTo(buildPoint(G[rs]));
-                    setTarget(rs);
+                    //setRouteTo(buildPoint(G[rs]));
+                    model.setRouteTo(G[rs], rs);
+                    model.setTarget(rs);
                 }
             } else {
                 clear();
@@ -202,23 +120,26 @@ export default function Map (props) {
         return  rad * c;
     }
 
-    function buildPoint(pt) {
+    function buildCoordinates(type, coords) {
         return ({
             type: 'FeatureCollection',
             features: [
-                {type: 'Feature', geometry: {type: 'Point', coordinates: pt}}
+                {type: 'Feature', geometry: {type: type, coordinates: coords}}
             ]
         })
+    }
+    function buildPoint(points) {
+        return buildCoordinates('Point', points)
     }
 
-    function buildLineString(pt) {
-        return ({
-            type: 'FeatureCollection',
-            features: [
-                {type: 'Feature', geometry: {type: 'LineString', coordinates: pt}}
-            ]
-        })
+    function buildLineString(points) {
+        return buildCoordinates('LineString', points)
     }
+
+    function buildPolygon(points) {
+        return buildCoordinates('Polygon', [points]);
+    }
+
 
     function handleSearchLon() {
         let G = getGraph();
@@ -229,10 +150,6 @@ export default function Map (props) {
         setLonSearchResults(rs);
     }
 
-    useEffect(() => {
-        handleSearchLon();
-    }, [lonSearch]);
-
     function handleSearchLat() {
         let G = getGraph();
         let rs = [];
@@ -242,21 +159,65 @@ export default function Map (props) {
         setLonSearchResults(rs);
     }
 
+    function zoomEvent() {
+        let minLng = mapModel.graph.bounds.minX;
+        let minLat = mapModel.graph.bounds.minY;
+        let maxLng = mapModel.graph.bounds.maxX;
+        let maxLat = mapModel.graph.bounds.maxY;
+        const vp = new WebMercatorViewport(viewport);
+        const {longitude, latitude, zoom} = vp.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
+            padding: 40
+        });
+        setViewport({
+            width: window.outerWidth,
+            height: window.outerHeight + 50,
+            latitude: latitude,
+            longitude:  longitude,
+            zoom: zoom,
+            transitionInterpolator: new LinearInterpolator({
+                around: vp.center
+            }),
+            transitionDuration: 1000
+        });
+    }
+
+    function getChecked(key, ref) {
+        return model.checked.includes(key) ? ref : buildLineString([]);
+    }
+
+    //Hook events
     useEffect(() => {
-        handleSearchLat();
-    }, [latSearch]);
+        zoomEvent();
+    }, [mapModel.graph]);
 
     useEffect(() => {
-        getRoute();
-    }, [target]);
+        function handleResize() {
+            setViewport({...viewport, width: window.innerWidth, height: window.innerHeight});
+        }
 
-    useEffect(() => {
-        loadFile();
-    }, [selectedFile]);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const bh            = getChecked("graphBounds", buildPolygon(mapModel.boundsHull));
+    const vertices      = getChecked("vertices", buildLineString(mapModel.graph.vertices));
+    const verticesHull  = getChecked("verticesHull", buildPolygon(mapModel.graph.verticesHull));
+    const landmarks     = getChecked("landmarks", buildLineString(mapModel.graph.landmarks));
+    const landmarksHull = getChecked("landmarksHull", buildPolygon(mapModel.graph.landmarksHull));
+    const visited       = getChecked("visited", buildLineString(mapModel.route.visited));
+    const visitedHull   = getChecked("visitedHull", buildPolygon(mapModel.route.hull));
+    const route         = getChecked("route", buildLineString(mapModel.route.route));
+    const routeFrom     =  buildPoint(model.selectedPoints.routeFrom.point);
+    const routeTo       =  buildPoint(model.selectedPoints.routeTo.point);
+
 
     return (
         <div>
         {graphLoading ? <LinearProgress /> : null}
+        <Backdrop className={classes.backdrop} open={mapModel.isLoading}>
+            <CircularProgress color="inherit" />
+        </Backdrop>
+
         <MapGL
             onViewportChange        = {handleChange}
             mapboxApiAccessToken    = {accessToken}
@@ -264,9 +225,42 @@ export default function Map (props) {
             {...viewport}
         >
 
-            <Source id="graph2" type="geojson" data={toggleGraph ? graph : buildLineString([])}>
+            <Source id="graphBounds" type="geojson" data={bh}>
                 <Layer
-                    id="graph2"
+                    id="graphBounds"
+                    type ="fill"
+                    paint = {{
+                        'fill-color': 'rgb(26,255,0)',
+                        'fill-opacity': 0.1,
+                        'fill-outline-color': 'rgb(0,128,1)',
+                    }} />
+            </Source>
+
+            <Source id="verticesRegion" type="geojson" data={verticesHull}>
+                <Layer
+                    id="verticesRegion"
+                    type ="fill"
+                    paint = {{
+                        'fill-color': '#313131',
+                        'fill-opacity': 0.1,
+                        'fill-outline-color': '#3f3f3f',
+                    }} />
+            </Source>
+
+            <Source id="landmarksRegion" type="geojson" data={landmarksHull}>
+                <Layer
+                    id="landmarksRegion"
+                    type ="fill"
+                    paint = {{
+                        'fill-color': '#bfa300',
+                        'fill-opacity': 0.1,
+                        'fill-outline-color': '#bf3b00',
+                    }} />
+            </Source>
+
+            <Source id="vertices" type="geojson" data={vertices}>
+                <Layer
+                    id="vertices"
                     type="circle"
                     paint={{
                         'circle-radius': viewport.zoom > 13 ? (viewport.zoom > 18 ? 5 : 2) : (viewport.zoom < 8 ? 0.5 : 1),
@@ -274,14 +268,26 @@ export default function Map (props) {
                     }}/>
             </Source>
 
-            <Source id="visited" type="geojson" data={toggleVisited ? visited : buildLineString([])}>
+            <Source id="visited" type="geojson" data={visited}>
                 <Layer
                     id="visited"
                     type="circle"
                     paint={{
-                        'circle-radius': viewport.zoom > 15 ? (viewport.zoom > 18 ? 5 : 4) : (viewport.zoom < 8 ? 0.5 : 1),
+                        'circle-radius': viewport.zoom > 13 ? (viewport.zoom > 18 ? 5 : 2) : (viewport.zoom < 8 ? 0.5 : 1),
                         'circle-color': 'rgb(26,83,255)'
                     }}/>
+            </Source>
+
+            <Source id="visitedRegion" type="geojson" data={visitedHull}>
+                <Layer
+                    id="visitedRegion"
+                    type ="fill"
+                    paint = {{
+                        'fill-color': 'rgb(26,83,255)',
+                        'fill-opacity': 0.6,
+                        'fill-antialias': false,
+                        'fill-outline-color': 'rgb(1,0,255)',
+                    }} />
             </Source>
 
 
@@ -319,35 +325,16 @@ export default function Map (props) {
                     }} />
             </Source>
 
-            {toggleLandmarks ?
-                <Source id="landmarks" type="geojson" data={landmarks}>
-                    <Layer
-                        id="landmarks"
-                        type="circle"
-                        paint={{
-                            'circle-radius': 8,
-                            'circle-color': '#bfbc00'
-                        }}/>
-                </Source>
-                :
-                null
-            }
 
-
-{/*            <Source id="graph" type="geojson" data={graph}>
+            <Source id="landmarks" type="geojson" data={landmarks}>
                 <Layer
-                    id ="graph"
-                    type ="line"
-                    layout = {{
-                        'line-join': 'round',
-                        'line-cap': 'round'
-                    }}
-                    paint = {{
-                        'line-color': '#000000',
-                        'line-width': 1
-                    }} />
-            </Source>*/}
-
+                    id="landmarks"
+                    type="circle"
+                    paint={{
+                        'circle-radius': 8,
+                        'circle-color': '#bfbc00'
+                    }}/>
+            </Source>
 
             <Source id="nearest" type="geojson" data={nearest}>
                 <Layer

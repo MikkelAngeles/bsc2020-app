@@ -1,23 +1,26 @@
-import React, {useEffect} from 'react';
-import Button from "@material-ui/core/Button";
-import SearchPanel from "./SearchPanel";
-import InputBase from "@material-ui/core/InputBase";
+import React, {useContext, useEffect, useState} from 'react';
 import TextField from "@material-ui/core/TextField";
 import Autocomplete from '@material-ui/lab/Autocomplete';
-import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
-import MenuIcon from "@material-ui/icons/Menu";
-import SearchIcon from "@material-ui/icons/Search";
 import Divider from "@material-ui/core/Divider";
 import DirectionsIcon from "@material-ui/icons/Directions";
 import Paper from "@material-ui/core/Paper";
 import {makeStyles} from "@material-ui/core/styles";
+import SettingsSwitch from "./SettingsSwitch";
+import {MapContext} from "./MapContext";
+import TabBar from "./TabBar";
+import SelectFileDialog from "./SelectFileDialog";
+import SelectAlgorithmDialog from "./SelectAlgorithmDialog";
+import DetailsView from "./DetailsView";
+import {SelectionContext} from "./SelectionContext";
+
 const useStyles = makeStyles((theme) => ({
     root: {
-        padding: '2px 4px',
+        padding: '10px 20px 10px 20px',
         display: 'flex',
         alignItems: 'center',
-        width: 400,
+        width: 360,
+        boxShadow: '0px 0px 4px 1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);'
     },
     input: {
         marginLeft: theme.spacing(1),
@@ -30,11 +33,18 @@ const useStyles = makeStyles((theme) => ({
         height: 28,
         margin: 4,
     },
+    ppr: {
+        boxShadow: '0px 0px 4px 1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12)',
+    }
 }));
 
 export default function InteractionPanel (props) {
-    const {toggleGraph, onGraphToggle, toggleLandmarks, onToggleLandmarks, toggleVisited, onToggleVisited} = props;
-    const {onLonSearch1, onLatSearch1, onLonSearch2, onLatSearch2, lonSearchResults, submit} = props;
+    const mapModel = useContext(MapContext);
+    const selModel = useContext(SelectionContext);
+
+    const {onLonSearch1, onLatSearch1, onLonSearch2, onLatSearch2, lonSearchResults} = props;
+
+    const [tab, setTab] = useState(0);
     const classes = useStyles();
     function handleLonSearch1(e) {
         onLonSearch1(e.currentTarget.value);
@@ -50,7 +60,7 @@ export default function InteractionPanel (props) {
     }
 
     function handleOnClickCalculate() {
-        submit();
+        mapModel.calculateRoute();
     }
 
     useEffect(() => {
@@ -59,12 +69,7 @@ export default function InteractionPanel (props) {
 
     return (
         <div>
-            <Typography variant="h5" component="h2">
-                Shortest Path Visualization
-            </Typography>
-            <Typography variant="subtitle2" component="h2" gutterBottom>
-                Author: Mikkel Helmersen, mhel@itu.dk
-            </Typography>
+
 
             <Paper component="form" className={classes.root}>
                 <div style={{display: 'flex', height: 114, width: '100%', padding: '10px'}}>
@@ -75,7 +80,7 @@ export default function InteractionPanel (props) {
                             options={lonSearchResults.map(val => val.toString())}
                             style={{width: '100%', marginBottom: '5px'}}
                             renderInput={(params) => (
-                                <TextField {...params}  id="standard-basic" label="Longitude from" onChange={handleLonSearch1} />
+                                <TextField {...params}  value={selModel.selectedPoints.routeFrom.point[0]} id="standard-basic" label="Longitude from" onChange={handleLonSearch1} />
                             )}
                         />
 
@@ -85,7 +90,7 @@ export default function InteractionPanel (props) {
                             options={lonSearchResults.map(val => val.toString())}
                             style={{width: '100%'}}
                             renderInput={(params) => (
-                                <TextField {...params} id="standard-basic" label="Latitude from" onChange={handleLatSearch1} />
+                                <TextField {...params} value={selModel.selectedPoints.routeFrom.point[1]} id="standard-basic" label="Latitude from" onChange={handleLatSearch1} />
                             )}
                         />
                     </div>
@@ -97,7 +102,7 @@ export default function InteractionPanel (props) {
                             options={lonSearchResults.map(val => val.toString())}
                             style={{width: '100%', marginBottom: '5px'}}
                             renderInput={(params) => (
-                                <TextField {...params} id="standard-basic" label="Longitude to" onChange={handleLonSearch2} />
+                                <TextField {...params} value={selModel.selectedPoints.routeTo.point[0]} id="standard-basic" label="Longitude to" onChange={handleLonSearch2} />
                             )}
                         />
 
@@ -107,7 +112,7 @@ export default function InteractionPanel (props) {
                             options={lonSearchResults.map(val => val.toString())}
                             style={{width: '100%'}}
                             renderInput={(params) => (
-                                <TextField {...params} id="standard-basic" label="Latitude to" onChange={handleLatSearch2} />
+                                <TextField {...params} value={selModel.selectedPoints.routeTo.point[1]} id="standard-basic" label="Latitude to" onChange={handleLatSearch2} />
                             )}
                         />
                     </div>
@@ -119,21 +124,19 @@ export default function InteractionPanel (props) {
                 </IconButton>
             </Paper>
 
-            <div style={{display: 'flex', flexDirection: 'column', width: '100%', marginTop: '20px'}}>
-                <Button variant={toggleGraph ? "contained" : "outlined"} color="primary" onClick={onGraphToggle} style={{marginBottom: '20px' }}>
-                    Toggle graph
-                </Button>
-                <Button variant={toggleVisited ? "contained" : "outlined"} color="primary" onClick={onToggleVisited}>
-                    Toggle visited vertices
-                </Button>
-            </div>
+            <Paper className={classes.ppr}>
+                <div style={{display: 'flex', marginTop: '20px', justifyContent: 'center', padding: '15px 0 15px 0', borderBottom: '1px solid #ccc'}}>
+                    <SelectFileDialog  />
+                    <SelectAlgorithmDialog />
+                </div>
+                <div style={{overflow: 'auto', height: '400px', padding: '0px 10px 10px 10px', boxShadow: '0px 0px 4px 1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);'}}>
+                    {tab === 0 ?
+                    <SettingsSwitch/> : <DetailsView />
+                    }
+                </div>
 
-            <div>
-                <div>Graph details</div>
-                <p>Vertices: 0</p>
-                <p>Edges: 0</p>
-                <p>Landmarks: 0</p>
-            </div>
+                <TabBar tab={tab} onChange={setTab} />
+            </Paper>
         </div>
     );
 }

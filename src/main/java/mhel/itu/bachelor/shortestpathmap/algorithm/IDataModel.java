@@ -1,6 +1,7 @@
 package mhel.itu.bachelor.shortestpathmap.algorithm;
 
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 public interface IDataModel {
@@ -36,6 +37,10 @@ public interface IDataModel {
     int[] getTravelTimes();
     void addTravelTime(int index, int t);
     int getTravelTime(int index);
+
+    //Landmarks
+    void generateRandomLandmarks(int count);
+    int[] getLandmarks();
 
     //Bounds
     float getMaxX();

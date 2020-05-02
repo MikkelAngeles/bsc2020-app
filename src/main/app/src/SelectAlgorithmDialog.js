@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useContext, useState} from 'react';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -10,37 +10,12 @@ import ListItemText from '@material-ui/core/ListItemText';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import Dialog from '@material-ui/core/Dialog';
 import PersonIcon from '@material-ui/icons/Person';
-import AddIcon from '@material-ui/icons/Add';
-import Typography from '@material-ui/core/Typography';
 import { blue } from '@material-ui/core/colors';
+import {SelectionContext} from "./SelectionContext";
+import {MapContext} from "./MapContext";
+import {algorithms, algorithmTitle} from "./selectionProperties";
 
-const algorithms = [
-    {
-        id: 0,
-        file: 'Dijkstra',
-        type: 'Mikkel Helmersen',
-    },
-    {
-        id: 1,
-        file: 'A*',
-        type: 'Mikkel Helmersen',
-    },
-    {
-        id: 2,
-        file: 'A* with landmarks',
-        type: 'Mikkel Helmersen',
-    },
-    {
-        id: 3,
-        file: 'Dijkstra',
-        type: 'https://algs4.cs.princeton.edu/',
-    },
-    {
-        id: 4,
-        file: 'A*',
-        type: 'https://algs4.cs.princeton.edu/',
-    },
-];
+
 
 const useStyles = makeStyles({
     avatar: {
@@ -51,22 +26,25 @@ const useStyles = makeStyles({
 
 function SimpleDialog(props) {
     const classes = useStyles();
-    const { onClose, selectedValue, open } = props;
-
+    const { onClose,  open } = props;
+    const model = useContext(MapContext);
+    const algs = algorithms;
+    const selected = model.selectedAlgorithm;
     const handleClose = () => {
-        onClose(selectedValue);
+        onClose();
     };
 
     const handleListItemClick = (value) => {
-        onClose(value);
+        model.setSelectedAlgorithm(value);
+        onClose();
     };
 
     return (
         <Dialog onClose={handleClose} aria-labelledby="simple-dialog-title" open={open}>
             <DialogTitle id="simple-dialog-title">Select Algorithm</DialogTitle>
             <List>
-                {algorithms.map((f,k) => (
-                    <ListItem button onClick={() => handleListItemClick(f.id)} key={f.id}>
+                {algs.map((f,k) => (
+                    <ListItem button onClick={() => handleListItemClick(f.id)} key={f.id} selected={selected === f.id}>
                         <ListItemAvatar>
                             <Avatar className={classes.avatar}>
                                 <PersonIcon />
@@ -84,31 +62,25 @@ function SimpleDialog(props) {
 SimpleDialog.propTypes = {
     onClose: PropTypes.func.isRequired,
     open: PropTypes.bool.isRequired,
-    selectedValue: PropTypes.string.isRequired,
 };
 
 export default function SelectAlgorithmDialog(props) {
-    const [open, setOpen] = React.useState(false);
-    const {selected, onSelect} = props;
-
+    const [open, setOpen] = useState(false);
+    const model = useContext(MapContext);
     const handleClickOpen = () => {
         setOpen(true);
     };
 
-    const handleClose = (value) => {
-        if(value === 6) {
-
-        }
+    const handleClose = () => {
         setOpen(false);
-        onSelect(value);
     };
 
     return (
         <div>
             <Button variant="outlined" color="primary" onClick={handleClickOpen}>
-                Select Algorithm
+                {algorithmTitle(model.selectedAlgorithm)}
             </Button>
-            <SimpleDialog selectedValue={selected} open={open} onClose={handleClose} />
+            <SimpleDialog open={open} onClose={handleClose} />
         </div>
     );
 }
