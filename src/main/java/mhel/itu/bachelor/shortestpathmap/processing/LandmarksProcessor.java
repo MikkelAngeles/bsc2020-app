@@ -12,72 +12,80 @@ import java.util.HashMap;
 
 public class LandmarksProcessor {
 
-    public static void main(String[] args) {
-        var L       = 16;
-        var pa      = "C:\\Users\\mh89\\dev\\shortest-path-map\\resources\\hi.json";
-        var P       = new GraphParser();
-        var M       = P.parseFromMyJson(pa);
-
-        M.generateRandomLandmarks(L);
-
-        var G       = M.generateGraph();
-        var D       = new Dijkstra();
-        var Q       = new RouteQuery();
-
+    public static void processDistToLandmark(IDataModel M, SimpleGraph G, IShortestPathAlgorithm sp, int target, String dir) {
+        var Q = new RouteQuery();
+        Q.setTarget(target);
         Q.addCriterion(
-            RouteCriteriaEvaluationType.DISTANCE,
-            new EdgePropSet(EdgePropKey.DEFAULT, EdgePropValue.DEFAULT),
-            1f
+                RouteCriteriaEvaluationType.DISTANCE,
+                new EdgePropSet(EdgePropKey.DEFAULT, EdgePropValue.DEFAULT),
+                1f
         );
 
-        System.out.println("Processing " + M.V() + " distances to " + L + " landmarks.");
-        var file = "C:\\Users\\mh89\\dev\\shortest-path-map\\resources\\hi\\";
-        var i = 1;
-        for(var l : M.getLandmarks()) {
-            try {
-                var path = file + "landmark"+i+++".txt";
-                var myObj = new File(path);
-                if (myObj.createNewFile()) {
-                    System.out.println("File created: " + myObj.getName());
-                } else {
-                    System.out.println(myObj.getName() + " already exists. Overriding.");
-                }
-                var myWriter = new FileWriter(path);
-                var bw = new BufferedWriter(myWriter);
-                    bw.write(l+"");
-                    bw.newLine();
-                    bw.write(M.V()+"");
-                    bw.newLine();
-                    Q.setTarget(l);
-                    for(var v : M.getVertices()) {
-                        Q.setSource(v.I());
-                        D.perform(G, M, Q);
-                        var dist = D.hasPath(l) ? D.distTo(l) : Double.POSITIVE_INFINITY;
-                        bw.write(v.I() + " " + dist);
-                        bw.newLine();
-                    }
-                bw.close();
-                myWriter.close();
-            } catch (IOException e) {
-                System.out.println("An error occurred.");
-                e.printStackTrace();
+        long start = System.nanoTime();
+        System.out.println("Processing " + M.V() + " distances to landmark vertex" + target);
+
+        try {
+            var filePath = dir + "tmplandmark"+target+".txt";
+            var fileObj = new File(filePath);
+            if (fileObj.createNewFile()) System.out.println("File created: " + fileObj.getName());
+            else System.out.println(fileObj.getName() + " already exists. Overriding.");
+
+            var myWriter = new FileWriter(filePath);
+            var bw = new BufferedWriter(myWriter);
+
+            bw.write(target+"");
+            bw.newLine();
+            bw.write(M.V()+"");
+            bw.newLine();
+
+            for(var v : M.getVertices()) {
+                Q.setSource(v.I());
+                sp.perform(G, M, Q);
+
+                //Consider skipping line entirely if there is no distance.
+                var dist = sp.hasPath(target) ? sp.distTo(target) : Double.POSITIVE_INFINITY;
+                bw.write(v.I() + " " + dist);
+                bw.newLine();
             }
+            bw.close();
+            myWriter.close();
+        } catch (IOException e) {
+            System.out.println("An error occurred.");
+            e.printStackTrace();
         }
+        long end = System.nanoTime();
+        System.out.println("Done! Processed " + M.V() +" vertices in (" + (end-start/1000000) + " ms)");
+    }
 
-/*
-        for(var v : M.getVertices()) {
-            var distTo = new HashMap<Integer, Double>();
-            Q.setSource(v.I());
-            System.out.println(v.I());
-            for(var l : M.getLandmarks()) {
-                Q.setTarget(l);
-                D.perform(G, M, Q);
-                var dist = D.hasPath(l) ? D.distTo(l) : Double.POSITIVE_INFINITY;
-                distTo.put(v.I(), dist);
-            }
+    public static void createLandmarksHil() {
+        var dir     = "resources/json/hil/";
+        var pa      = dir + "hil.json";
+        var list    = new int[] {22667, 28460, 8231, 20792, 9840, 26338, 8422, 3703, 1962, 22583, 27380, 18166, 15417, 1757, 14, 22970};
 
-            vertexToLandmarkDistance.put(v.I(), distTo);
-        }*/
-        System.out.println("Processing complete.");
+        for(var l : list) {
+            Runnable task = () -> {
+                var P = new GraphParser();
+                var M = P.parseFromMyJson(pa);
+                var G = M.generateGraph();
+                var D = new Dijkstra();
+                processDistToLandmark(M, G, D, l, dir);
+            };
+            var t = new Thread(task);
+            new Thread(t).start();
+        }
+    }
+
+    public static class RunnableProcessing implements Runnable {
+        @Override
+        public void run() {
+
+
+        }
+    }
+
+    public static void main(String[] args) {
+
+        createLandmarksHil();
+
     }
 }

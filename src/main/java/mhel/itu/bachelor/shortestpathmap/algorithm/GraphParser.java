@@ -34,17 +34,19 @@ public class GraphParser {
         var str1     = edges.readLine();
         var split1   = str1.split(" ");
         var E        = Integer.parseInt(split1[split1.length - 1]);
+        if (E < 0) throw new IllegalArgumentException("Number of edges must be non negative");
 
         vertices.readLine();
         vertices.readLine();
         edges.readLine();
         edges.readLine();
 
-        var dm = new DataModel(V, E);
 
+        var tmpVertices = new HashMap<Integer, Point2D>();
+        var vertexCollisions = new HashMap<Point2D, Integer>();
         for (int i = 0; i < V; i++) {
             vertices.readString();
-            int index = vertices.readInt();
+            int index = vertices.readInt() - 1; //Subtract 1 because dimacs indices starts at 1.
 
             //Ghetto conversion.
             var xInt = vertices.readInt();
@@ -62,21 +64,53 @@ public class GraphParser {
             substr2 = yStr.substring(2);
             var y = Double.parseDouble((isNegative ? "-" : "")+substr1 + "." + substr2);
 
-            dm.addVertex(index, x, y);
+            //Detect vertex collisions
+            var pt = new Point2D.Double(x ,y);
+            var count = vertexCollisions.get(pt);
+            count = count == null ? 1 : count + 1;
+            if(count > 1) throw new IllegalArgumentException("Collision detected for vertex " + index + ", count: " + count);
+            vertexCollisions.put(pt, count);
+
+            tmpVertices.put(index, pt);
         }
 
-        if (E < 0) throw new IllegalArgumentException("Number of edges must be nonnegative");
 
+
+        var tmpEdges = new ArrayList<DimacsEdge>();
+        var edgeCollisions = new HashMap<Integer, HashSet<Integer>>();
         for (int i = 0; i < E; i++) {
             edges.readString();
 
-            var v = edges.readInt();
-            var w = edges.readInt();
+            var v = edges.readInt() - 1; //Subtract 1 because dimacs indices starts at 1.
+            var w = edges.readInt() - 1; //Subtract 1 because dimacs indices starts at 1.
             var dist = edges.readInt();
 
-            var e = dm.addEdge(v, w);
-            dm.addDist(e, dist);
+            var cur_set = edgeCollisions.get(v);
+            if(cur_set == null) cur_set = new HashSet<>();
+            if(cur_set.contains(w)) continue;
+
+            tmpEdges.add(new DimacsEdge(v, w, dist));
+            cur_set.add(w);
+            edgeCollisions.put(v, cur_set);
         }
+
+        var dm = new DataModel(tmpVertices.size(), tmpEdges.size());
+
+        //Cleaned vertices
+        for(var v : tmpVertices.entrySet()) {
+            var cur = v.getValue();
+            dm.addVertex(v.getKey(), cur.getX(), cur.getY());
+        }
+        //Cleaned edges
+        try {
+            for (var t : tmpEdges) {
+                var e = dm.addEdge(t.v, t.w);
+                dm.addDist(e, t.dist);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         return dm;
     }
 
@@ -85,7 +119,7 @@ public class GraphParser {
 
         //foreach landmark
         for(var i = 1; i < 16; i ++) {
-            var lm = "C:\\Users\\mh89\\dev\\shortest-path-map\\resources\\hi\\landmark"+i+".txt";
+            var lm = "resources/json/hil/landmark"+i+".txt";
             var landmarks = new In(lm);
             var id = landmarks.readInt();
             var size = landmarks.readInt();
@@ -357,6 +391,18 @@ public class GraphParser {
 
     private static double toRadians(double coordinateXorY) {
         return coordinateXorY * Math.PI / 180;
+    }
+
+    public class DimacsEdge {
+        public int v;
+        public int w;
+        public double dist;
+
+        public DimacsEdge(int v, int w, double dist) {
+            this.v = v;
+            this.w = w;
+            this.dist = dist;
+        }
     }
 
     public class ParsedEdge {

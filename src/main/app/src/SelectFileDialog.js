@@ -87,7 +87,7 @@ function SimpleDialog(props) {
     const { onClose,  open } = props;
     const model = useContext(MapContext);
     const g = graphs;
-    const selected = model.selectedAlgorithm;
+    const selected = model.selectedGraph;
     const handleClose = () => {
         onClose();
     };

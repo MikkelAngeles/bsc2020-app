@@ -1,6 +1,4 @@
-import React, {useContext, useEffect, useState} from 'react';
-import TextField from "@material-ui/core/TextField";
-import Autocomplete from '@material-ui/lab/Autocomplete';
+import React, {useContext, useState} from 'react';
 import IconButton from "@material-ui/core/IconButton";
 import Divider from "@material-ui/core/Divider";
 import DirectionsIcon from "@material-ui/icons/Directions";
@@ -17,16 +15,18 @@ import Chip from "@material-ui/core/Chip";
 import Avatar from "@material-ui/core/Avatar";
 import FromIcon from "@material-ui/icons/Flag";
 import ListItem from "@material-ui/core/ListItem";
+import LocateIcon from "@material-ui/icons/MyLocation";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
-import ListItemText from "@material-ui/core/ListItemText";
 import List from "@material-ui/core/List";
 import Typography from "@material-ui/core/Typography";
-import Console from "react-component-console";
+import ResultsIcon from '@material-ui/icons/Description';
+import SettingsIcon from '@material-ui/icons/Settings';
 
 function PointChip(props) {
     const {item} = props;
     return(
-        <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', width: '350px'}}>
+        <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', width: '310px'}}>
+            <Chip variant="outlined" label={item.index}/>
             <Chip variant="outlined" avatar={<Avatar>Lon</Avatar>} label={`${item.point[0]}`} style={{justifyContent: 'start', width: '100%'}} />
             <Chip variant="outlined" avatar={<Avatar>Lat</Avatar>} label={`${item.point[1]}`} style={{justifyContent: 'start', width: '100%'}}/>
         </div>
@@ -104,6 +104,15 @@ export default function InteractionPanel (props) {
                             <PointChip item={selModel.selectedPoints.routeTo}/>
                         </ListItem>
 
+                        <ListItem>
+                            <ListItemAvatar>
+                                <Avatar style={{background: 'blue'}}>
+                                    <LocateIcon />
+                                </Avatar>
+                            </ListItemAvatar>
+                            <PointChip item={selModel.selectedPoints.nearest}/>
+                        </ListItem>
+
                     </List>
 
                     <Divider className={classes.divider} orientation="horizontal" />
@@ -126,7 +135,17 @@ export default function InteractionPanel (props) {
                     }
                 </div>
 
-                <TabBar tab={tab} onChange={setTab} />
+                <TabBar tab={tab} onChange={setTab} tabs={[
+                    {
+                        label: 'Settings',
+                        icon: <SettingsIcon />
+                    },
+                    {
+                        label: 'Details',
+                        icon: <ResultsIcon />
+                    }
+                ]}/>
+
             </Paper>
         </div>
     );

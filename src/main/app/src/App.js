@@ -43,8 +43,6 @@ function App() {
                                     <Map />
                                 </div>
 
-
-
                             </div>
 
                             <DetailsDrawer />

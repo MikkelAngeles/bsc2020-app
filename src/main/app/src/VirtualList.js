@@ -1,5 +1,5 @@
 import React, {useContext, useEffect, useRef, useState} from 'react';
-import PropTypes from 'prop-types';
+
 import { makeStyles } from '@material-ui/core/styles';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -12,11 +12,9 @@ import {SelectionContext} from "./SelectionContext";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import List from "@material-ui/core/List";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
-import PersonIcon from "@material-ui/icons/Person";
 import Dialog from "@material-ui/core/Dialog";
 
 import FromIcon from "@material-ui/icons/Flag";
-import ToIcon from "@material-ui/icons/FlagOutlined";
 import LocateIcon from "@material-ui/icons/MyLocation";
 import TextField from "@material-ui/core/TextField";
 import {useDebounce} from "use-lodash-debounce/dist";
@@ -24,10 +22,10 @@ import Typography from "@material-ui/core/Typography";
 
 const useStyles = makeStyles((theme) => ({
     root: {
-        height: '100%',
         backgroundColor: theme.palette.background.paper,
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        padding: '20px'
     },
     fixedList: {
         height: '100%'
@@ -102,7 +100,7 @@ export default function VirtualList(props) {
     const [anchorEl, setAnchorEl] = useState(null);
     const [open, setOpen] = useState(null);
     const [list, setList] = useState([]);
-    const [listHeight, setListHeight] = useState( window.innerHeight - 250);
+    const [listHeight, setListHeight] = useState( window.innerHeight - 322);
     const [srcInput, setSrcInput] = useState("");
     const debouncedValue          = useDebounce(srcInput, 300);
     const [selected, setSelected] = useState({index:0, point: []});
@@ -164,7 +162,7 @@ export default function VirtualList(props) {
 
     useEffect(() => {
         function handleResize() {
-            setListHeight(listRef && listRef.current ? listRef.current.offsetHeight - 100 : window.innerHeight - 200);
+            setListHeight(listRef && listRef.current ? listRef.current.offsetHeight - 172 : window.innerHeight - 322);
         }
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);

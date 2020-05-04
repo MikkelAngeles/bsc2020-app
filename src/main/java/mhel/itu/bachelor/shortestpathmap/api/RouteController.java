@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.Random;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
@@ -22,44 +21,19 @@ public class RouteController {
         return new BoundsDTO(model.getMaxX(), model.getMinX(), model.getMaxY(), model.getMinY());
     }
 
-    @GetMapping("/load/myjson")
-    public GraphDTO loadMyJson() {
-        var pa = "C:\\Users\\mh89\\dev\\shortest-path-map\\resources\\hi.json";
+    @GetMapping("/load/json/hil")
+    public GraphDTO loadJsonHi() {
+        var pa = "resources/json/hil/hil.json";
         model = P.parseFromMyJson(pa);
-        return getGraph();
-    }
-
-    @GetMapping("/load/json")
-    public GraphDTO loadJson() {
-        var pa = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\json\\route_line.geojson";
-        model = P.parseFromJson(pa);
         return getGraph();
     }
 
     @GetMapping("/load/dimacs/nyc")
     public GraphDTO loadDimacsNyc() {
-        String path1 = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\USA-road-d.NY.co";
-        String path2 = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\USA-road-d.NY.gr";
-        String path3 = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\USA-road-t.NY.gr";
-        model = P.ParseFromIn(new In(path1), new In(path2), new In(path3));
-        return getGraph();
-    }
-
-    @GetMapping("/load/dimacs/usa")
-    public GraphDTO loadDimacsUsa() {
-        String path1 = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\usa full\\USA-road-d.USA.co";
-        String path2 = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\usa full\\USA-road-d.USA.gr";
-        String path3 = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\usa full\\USA-road-t.USA.gr";
-        model = P.ParseFromIn(new In(path1), new In(path2), new In(path3));
-        return getGraph();
-    }
-
-    @GetMapping("/load/dimacs/fla")
-    public GraphDTO loadDimacsFla() {
-        String path1 = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\FLA\\USA-road-d.FLA.co";
-        String path2 = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\FLA\\USA-road-d.FLA.gr";
-        String path3 = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\FLA\\USA-road-t.FLA.gr";
-        model = P.ParseFromIn(new In(path1), new In(path2), new In(path3));
+        String v = "resources/dimacs/nyc/vertices.co";
+        String d = "resources/dimacs/nyc/distance.gr";
+        String t = "resources/dimacs/nyc/time.gr";
+        model = P.ParseFromIn(new In(v), new In(d), new In(t));
         return getGraph();
     }
 
@@ -171,11 +145,12 @@ public class RouteController {
         dto.E = model.E();
         dto.V = model.V();
         dto.vertices = getVertices();
-        dto.verticesHull = calculateConvexHull(dto.vertices);
+        if(dto.vertices.size() > 0) dto.verticesHull = calculateConvexHull(dto.vertices);
+
         dto.landmarks = getLandmarks();
-        dto.landmarksHull = calculateConvexHull(dto.landmarks);
+        if(dto.landmarks.size() > 0) dto.landmarksHull = calculateConvexHull(dto.landmarks);
+
         dto.bounds = new BoundsDTO(model.getMaxX(), model.getMinX(), model.getMaxY(), model.getMinY());
-        dto.edges = getEdges();
         dto.edges = getEdges();
         return dto;
     }
@@ -289,6 +264,8 @@ public class RouteController {
     }
 
     public List<double[]> calculateConvexHull(List<double[]> arr) {
+        if(arr.size() == 0) return null;
+
         var points = new edu.princeton.cs.algs4.Point2D[arr.size()];
         var i = 0;
 

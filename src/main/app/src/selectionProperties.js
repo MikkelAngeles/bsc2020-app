@@ -1,12 +1,15 @@
 export function graphTitle(id) {
     return graphs[id].file + "  (" + graphs[id].type + ")";
 }
+export function graphUrl(id) {
+    return graphs[id].url;
+}
 export const graphs = [
     {
         id: 0,
         file: 'Hillerød',
         type: 'GeoJSON - OSM',
-        url: '/load/json',
+        url: '/load/json/hil',
         vertices: 29711,
         edges: 80454,
         bytes: 3.7
@@ -15,7 +18,7 @@ export const graphs = [
         id: 1,
         file: 'New York City',
         type: 'DIMACS',
-        url: '/dimacs/nyc',
+        url: '/load/dimacs/nyc',
         vertices: '264,346',
         edges: '733,846',
         bytes: (2 + 3.6 + 3.5)
@@ -69,6 +72,9 @@ export const graphs = [
 
 export function algorithmTitle(id) {
     return algorithms[id].file;
+}
+export function algorithmUrl(id) {
+    return algorithms[id].url;
 }
 export const algorithms = [
     {

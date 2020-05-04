@@ -2,6 +2,7 @@ import React, {useContext, useEffect, useState} from 'react';
 import {SelectionContext} from "./SelectionContext";
 import axios from "axios";
 import {AlertContext} from "./AlertContext";
+import {algorithmTitle, algorithmUrl, graphTitle, graphUrl} from "./selectionProperties";
 
 const baseUrl = 'http://localhost:8080';
 
@@ -26,6 +27,7 @@ export function useMapModel (props) {
     const [route, setRoute]                             = useState(routeTemplate);
     const [isLoading, setIsLoading]                     = useState(false);
     const [edges, setEdges]                             = useState([]);
+    const [results, setResults]                         = useState([]);
 
     const boundsHull = [
         [graph.bounds.minX, graph.bounds.minY],
@@ -75,24 +77,25 @@ export function useMapModel (props) {
     function loadGraph() {
         if(isLoading) return;
         setIsLoading(true);
-
+        alertModel.info("Loading " + graphTitle(selectedGraph) + "");
         selectionModel.clearSelectedPoints();
 
-        let path = baseUrl + "/load";
-        if(selectedGraph === 0) path += '/myjson';
-        else if(selectedGraph === 1) path += '/dimacs/nyc';
-
+        let path = baseUrl + graphUrl(selectedGraph);
         setGraph(graphTemplate);
         axios.get(path)
             .then((response) => {
                 if(response.status === 200 && response.data) {
                     let data = response.data;
                     setGraph(data);
-                    alertModel.success("Graph loaded");
+                    alertModel.success("Successfully loaded " + graphTitle(selectedGraph) + "!");
                 }
                 console.log(response);
             })
-            .catch((e) => alertModel.error(e.toString()))
+            .then(response => console.log(response))
+            .catch((e) => {
+                console.log(e.response);
+                alertModel.error(e.response.data.status + " " + e.response.data.message)
+            })
             .finally(() => setIsLoading(false))
     }
 
@@ -105,19 +108,33 @@ export function useMapModel (props) {
         }
         setIsLoading(true);
 
-        let alg = selectedAlgorithm === 0 ? 'dijkstra' :  (selectedAlgorithm === 1 ? 'astar': 'astar-landmarks');
+        let alg = algorithmUrl(selectedAlgorithm);
         let path = `${alg}?from=${q.source}&to=${q.target}`;
         if(selectedAlgorithm === 1 || selectedAlgorithm === 2) path += `&heuristic=${q.heuristicsWeight}`;
 
-        axios.get(`${baseUrl}/route/${path}`)
+        let resultTemplate = {
+            from: q.source,
+            to: q.target,
+            graph: graphTitle(selectedGraph),
+            algorithm: algorithmTitle(selectedAlgorithm),
+            data: routeTemplate
+        };
+
+        axios.get(`${baseUrl}/${path}`)
             .then((response) => {
                 if(response.status === 200 && response.data) {
                     let data = response.data;
                     setRoute(data);
-                    alertModel.success("Route calculated in " + (data.elapsed / 1000000) + " ms, distance " + data.dist);
+                    resultTemplate.data = data;
+                    setResults([...results, resultTemplate]);
+                    alertModel.success("Route calculated in " + (data.elapsed / 1000000) + " ms, distance " + data.dist.toFixed(4));
                 }
             })
-            .catch((e) => alertModel.error(e.toString()))
+            .catch((e) => {
+                console.log(e);
+                alertModel.error(e.toString());
+                setResults([...results, resultTemplate]);
+            })
             .finally(() => setIsLoading(false))
     }
 
@@ -151,6 +168,7 @@ export function useMapModel (props) {
         calculateRoute: getRoute,
         edges,
         getNearestEdgePoints,
-        getNearestEdges
+        getNearestEdges,
+        results
     }
 }

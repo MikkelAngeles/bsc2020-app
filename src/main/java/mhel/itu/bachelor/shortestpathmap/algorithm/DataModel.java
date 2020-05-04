@@ -45,6 +45,7 @@ public class DataModel implements IDataModel {
         this.propMap = new HashMap<>();
         this.refMap = new HashMap<>();
         this.lineMap = new HashMap<>();
+        this.landmarksTable = new HashMap<>();
         edgesCounter = 0;
 
         for (int i = 0; i < E; i++) {
@@ -54,7 +55,7 @@ public class DataModel implements IDataModel {
 
     @Override
     public void addVertex(int index, double x, double y) {
-        if(index > vertices.length) throw new IllegalArgumentException("Index is out of bounds");
+        if(index > vertices.length) throw new IllegalArgumentException("Index "+index+"is out of bounds " + vertices.length);
         if(x > maxX) maxX = x;
         if(x < minX) minX = x;
         if(y > maxY) maxY = y;
@@ -64,13 +65,13 @@ public class DataModel implements IDataModel {
 
     @Override
     public SimpleVertex getVertex(int index) {
-        if(index > vertices.length) throw new IllegalArgumentException("Index is out of bounds");
+        if(index > vertices.length) throw new IllegalArgumentException("Index "+index+"is out of bounds " + vertices.length);
         return vertices[index];
     }
 
     @Override
     public int addEdge(int v, int w) {
-        for(var e : getAdjacent(v)) if(e.to().I() == w) throw new IllegalArgumentException("Edge collision");
+        for(var e : getAdjacent(v)) if(e.to().I() == w) throw new IllegalArgumentException("Edge collision " + v + " " + w);
         var index = edgesCounter++;
         edges[index] = new SimpleEdge(index, getVertex(v), getVertex(w));
         adj[v].add(edges[index]);
