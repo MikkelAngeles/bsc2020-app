@@ -9,15 +9,15 @@ import java.util.Queue;
 
 public class Astar implements IShortestPathAlgorithm {
     private IEdge[] edgeTo;
-    private float[] gScore;
-    private float[] fScore;
-    private IndexMinPQ<Float> pq;
+    private double[] gScore;
+    private double[] fScore;
+    private IndexMinPQ<Double> pq;
     private Queue<Integer> visited;
     private IDataModel dataModel;
     private RouteQuery query;
-    private float heuristicWeight;
+    private double heuristicWeight;
 
-    public Astar(float h) { this.heuristicWeight = h;}
+    public Astar(double h) { this.heuristicWeight = h;}
 
     @Override
     public void perform(SimpleGraph G, IDataModel dm, RouteQuery query) {
@@ -31,8 +31,8 @@ public class Astar implements IShortestPathAlgorithm {
         visited = new LinkedList<>();
         edgeTo = new SimpleEdge[G.getV()];     //Assign array size from number of vertices in graph
 
-        gScore = new float[G.getV()]; //Assign array size from number of vertices in graph
-        fScore = new float[G.getV()];
+        gScore = new double[G.getV()]; //Assign array size from number of vertices in graph
+        fScore = new double[G.getV()];
 
         for (int v = 0; v < G.getV(); v++) {
             gScore[v] = Float.POSITIVE_INFINITY;
@@ -68,7 +68,7 @@ public class Astar implements IShortestPathAlgorithm {
         }
     }
 
-    public float h(int v) {
+    public double h(int v) {
         var n = dataModel.getVertex(v);
         var t = dataModel.getVertex(query.target);
         var x1 = n.X();

@@ -1,7 +1,5 @@
 import React, {useState} from 'react';
 
-
-
 export function useSelectionModel (props) {
     const [query, setQuery] = useState({
         source: -1,
@@ -9,25 +7,20 @@ export function useSelectionModel (props) {
         criteria: [],
         heuristicsWeight: 1
     });
-
     const [selectedPoints, setSelectedPoints] = useState({
         nearest:    {index: -1, point: []},
         routeFrom:  {index: -1, point: []},
         routeTo:    {index: -1, point: []}
     });
 
-    const [checked, setChecked] = useState(['route']);
-
-    const [lonSearchResults, setLonSearchResults]       = useState([]);
+    const [checked, setChecked] = useState(['route', 'verticesHull']);
 
     function handleHeuristicWeight(v) {
         setQuery({...query, heuristicsWeight: v});
     }
-
     function handleSetSource(v) {
         setQuery({...query, source: v});
     }
-
     function handleSetTarget(v) {
         setQuery({...query, target: v});
     }
@@ -37,9 +30,11 @@ export function useSelectionModel (props) {
     }
     function handleSetRouteFrom(pt, index)  {
         setSelectedPoints({...selectedPoints, routeFrom: {index: index, point: pt}});
+        handleSetSource(index);
     }
     function handleSetRouteTo(pt, index) {
         setSelectedPoints({...selectedPoints, routeTo: {index: index, point: pt}});
+        handleSetTarget(index);
     }
 
     function clearSelectedPoints() {
@@ -47,7 +42,8 @@ export function useSelectionModel (props) {
             nearest:    {index: -1, point: []},
             routeFrom:  {index: -1, point: []},
             routeTo:    {index: -1, point: []}
-        })
+        });
+        setQuery({...query, source: -1, target: -1});
     }
 
     return {

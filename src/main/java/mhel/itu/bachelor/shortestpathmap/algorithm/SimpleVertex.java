@@ -2,10 +2,10 @@ package mhel.itu.bachelor.shortestpathmap.algorithm;
 
 public class SimpleVertex implements IVertex {
     public int i;
-    public float x;
-    public float y;
+    public double x;
+    public double y;
 
-    public SimpleVertex(int i, float x, float y) {
+    public SimpleVertex(int i, double x, double y) {
         this.i = i;
         this.x = x;
         this.y = y;
@@ -17,12 +17,12 @@ public class SimpleVertex implements IVertex {
     }
 
     @Override
-    public float X() {
+    public double X() {
         return x;
     }
 
     @Override
-    public float Y() {
+    public double Y() {
         return y;
     }
 }

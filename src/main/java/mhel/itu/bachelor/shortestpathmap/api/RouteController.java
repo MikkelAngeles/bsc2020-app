@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Random;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
@@ -19,6 +20,13 @@ public class RouteController {
     @GetMapping("/bounds")
     public BoundsDTO bounds() {
         return new BoundsDTO(model.getMaxX(), model.getMinX(), model.getMaxY(), model.getMinY());
+    }
+
+    @GetMapping("/load/myjson")
+    public GraphDTO loadMyJson() {
+        var pa = "C:\\Users\\mh89\\dev\\shortest-path-map\\resources\\hi.json";
+        model = P.parseFromMyJson(pa);
+        return getGraph();
     }
 
     @GetMapping("/load/json")
@@ -55,19 +63,24 @@ public class RouteController {
         return getGraph();
     }
 
+    @GetMapping("/edges")
+    public List<EdgeDTO> vertices (@RequestParam(value = "vertex") int vertex) {
+        return getEdgesByVertex(vertex);
+    }
+
     @GetMapping("/vertices")
     public IVertex[] vertices () {
         return model.getVertices();
     }
 
     @GetMapping("/vertices/trimmed")
-    public List<float[]> verticesTrimmed () {
-        var lst = new ArrayList<float[]>();
+    public List<double[]> verticesTrimmed () {
+        var lst = new ArrayList<double[]>();
         try {
             var vertices = model.getVertices();
 
             for (var v : vertices) {
-                if (v != null) lst.add(new float[]{v.X(), v.Y()});
+                if (v != null) lst.add(new double[]{v.X(), v.Y()});
             }
         } catch (Exception e) {
 
@@ -76,14 +89,14 @@ public class RouteController {
     }
 
     @GetMapping("/route/visited")
-    public List<float[]> visited () {
-        var lst = new ArrayList<float[]>();
+    public List<double[]> visited () {
+        var lst = new ArrayList<double[]>();
         try {
             var visited = spAlgorithm.getVisited();
             for (var i : visited) {
                 if (i == null) continue;
                 var v = model.getVertex(i);
-                lst.add(new float[]{v.X(), v.Y()});
+                lst.add(new double[]{v.X(), v.Y()});
             }
         } catch (Exception e) {
 
@@ -110,7 +123,7 @@ public class RouteController {
     }
 
     @GetMapping("/route/astar")
-    public RouteResultDTO routeAstar (@RequestParam(value = "from") int from, @RequestParam(value = "to") int to, @RequestParam(value = "heuristic") float h) {
+    public RouteResultDTO routeAstar (@RequestParam(value = "from") int from, @RequestParam(value = "to") int to, @RequestParam(value = "heuristic") double h) {
         var query = new RouteQuery();
         query.setSource(from);
         query.setTarget(to);
@@ -130,7 +143,7 @@ public class RouteController {
     @GetMapping("/route/astar-landmarks")
     public RouteResultDTO routeAstarLandmarks (@RequestParam(value = "from") int from,
                                                @RequestParam(value = "to") int to,
-                                               @RequestParam(value = "heuristic") float h) {
+                                               @RequestParam(value = "heuristic") double h) {
         var query = new RouteQuery();
         query.setSource(from);
         query.setTarget(to);
@@ -162,6 +175,8 @@ public class RouteController {
         dto.landmarks = getLandmarks();
         dto.landmarksHull = calculateConvexHull(dto.landmarks);
         dto.bounds = new BoundsDTO(model.getMaxX(), model.getMinX(), model.getMaxY(), model.getMinY());
+        dto.edges = getEdges();
+        dto.edges = getEdges();
         return dto;
     }
 
@@ -208,16 +223,49 @@ public class RouteController {
 
     public List<double[]> getLandmarks() {
         var lst = new ArrayList<double[]>();
+        for (var i : model.getLandmarksTable().entrySet()) {
+            var v = model.getVertex(i.getKey());
+            lst.add(new double[]{v.X(), v.Y()});
+        }
+/*
+        var hull = calculateConvexHull(getVertices());
+        var landmarks = new int[16];
+        var rnd = new Random();
+        for(var i = 0; i < 16; i++) {
+            var rs = hull.get(rnd.nextInt(hull.size()));
+            lst.add(new double[]{rs[0], rs[1]});
+            //landmarks[i] = hull.get(rnd.nextInt(hull.size()));
+        }
+
+        *//*model.generateRandomLandmarks(16);
         for (var i : model.getLandmarks()) {
             var v = model.getVertex(i);
             lst.add(new double[]{v.X(), v.Y()});
-        }
+            break;
+        }*/
+
         return lst;
     }
     public List<double[]> getVertices() {
         var lst = new ArrayList<double[]>();
         for (var v : model.getVertices()) {
             if (v != null) lst.add(new double[]{v.X(), v.Y()});
+        }
+        return lst;
+    }
+
+    public List<EdgeDTO> getEdgesByVertex(int v) {
+        var lst = new ArrayList<EdgeDTO>();
+        for (var e : model.getAdjacent(v)) {
+            if (e != null) lst.add(new EdgeDTO(e.index(), e.from().I(), e.to().I(), model.getDist(e.index())));
+        }
+        return lst;
+    }
+
+    public List<EdgeDTO> getEdges() {
+        var lst = new ArrayList<EdgeDTO>();
+        for (var e : model.getEdges()) {
+            if (e != null) lst.add(new EdgeDTO(e.index(), e.from().I(), e.to().I(), model.getDist(e.index())));
         }
         return lst;
     }

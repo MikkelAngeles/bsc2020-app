@@ -6,8 +6,8 @@ import java.util.*;
 
 public class Dijkstra implements IShortestPathAlgorithm {
     private IEdge[] edgeTo;
-    private float[] distTo;
-    private IndexMinPQ<Float> pq;           // priority queue of vertices
+    private double[] distTo;
+    private IndexMinPQ<Double> pq;           // priority queue of vertices
     private Queue<Integer> visited;
     private IDataModel dataModel;
     private RouteQuery query;
@@ -22,14 +22,14 @@ public class Dijkstra implements IShortestPathAlgorithm {
                 throw new IllegalArgumentException("edge " + e + " has negative weight");
         }
         visited = new LinkedList<>();
-        distTo = new float[G.getV()];          //Assign array size from number of vertices in graph
+        distTo = new double[G.getV()];          //Assign array size from number of vertices in graph
         edgeTo = new SimpleEdge[G.getV()];     //Assign array size from number of vertices in graph
         this.dataModel = dm;
         this.query = query;
 
         //Add POSITIVE_INFINITY value to every vertex
         for (int v = 0; v < G.getV(); v++)
-            distTo[v] = Float.POSITIVE_INFINITY;
+            distTo[v] = Double.POSITIVE_INFINITY;
 
         //Set the start vertex distance s to 0.0
         distTo[query.getSource()] = 0.0f;
@@ -51,7 +51,7 @@ public class Dijkstra implements IShortestPathAlgorithm {
         }
     }
 
-    public float cost(int edge) {
+    public double cost(int edge) {
         var accum = 0f;
         for(var c : query.getCriteria()) {
             if(dataModel.hasPropType(edge, c.getSet().getType())) {
@@ -67,7 +67,7 @@ public class Dijkstra implements IShortestPathAlgorithm {
         return accum;
     }
 
-    private void relax(IEdge e, float weight) {
+    private void relax(IEdge e, double weight) {
         int v = e.from().I(), w = e.to().I();
         visited.add(w);
         if (distTo[w] > distTo[v] + weight) {
@@ -89,7 +89,7 @@ public class Dijkstra implements IShortestPathAlgorithm {
 
     @Override
     public boolean hasPath(int v) {
-        return distTo(v) < Float.POSITIVE_INFINITY;
+        return distTo(v) < Double.POSITIVE_INFINITY;
     }
 
     @Override

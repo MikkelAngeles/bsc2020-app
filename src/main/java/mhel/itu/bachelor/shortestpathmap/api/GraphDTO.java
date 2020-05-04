@@ -12,4 +12,5 @@ public class GraphDTO {
     public List<double[]> verticesHull;
     public List<double[]> landmarks;
     public List<double[]> landmarksHull;
+    public List<EdgeDTO> edges;
 }

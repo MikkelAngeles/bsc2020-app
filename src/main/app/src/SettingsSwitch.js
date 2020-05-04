@@ -101,7 +101,7 @@ export default function SettingsSwitch() {
                 />
 
                 <SwitchItem
-                    primary     = "Vertices hull"
+                    primary     = "Hull"
                     onChange    = {handleToggle('verticesHull')}
                     checked     = {checked.indexOf('verticesHull') !== -1}
                     icon        = {<MapIcon />}

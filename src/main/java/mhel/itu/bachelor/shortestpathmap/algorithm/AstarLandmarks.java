@@ -9,15 +9,15 @@ import java.util.Queue;
 
 public class AstarLandmarks implements IShortestPathAlgorithm {
     private IEdge[] edgeTo;
-    private float[] gScore;
-    private float[] fScore;
-    private IndexMinPQ<Float> pq;
+    private double[] gScore;
+    private double[] fScore;
+    private IndexMinPQ<Double> pq;
     private Queue<Integer> visited;
     private IDataModel dataModel;
     private RouteQuery query;
-    private float heuristicWeight;
+    private double heuristicWeight;
 
-    public AstarLandmarks(float h) { this.heuristicWeight = h;}
+    public AstarLandmarks(double h) { this.heuristicWeight = h;}
 
     @Override
     public void perform(SimpleGraph G, IDataModel dm, RouteQuery query) {
@@ -31,12 +31,12 @@ public class AstarLandmarks implements IShortestPathAlgorithm {
 
         visited = new LinkedList<>();
         edgeTo = new SimpleEdge[G.getV()];     //Assign array size from number of vertices in graph
-        gScore = new float[G.getV()]; //Assign array size from number of vertices in graph
-        fScore = new float[G.getV()];
+        gScore = new double[G.getV()]; //Assign array size from number of vertices in graph
+        fScore = new double[G.getV()];
 
         for (int v = 0; v < G.getV(); v++) {
-            gScore[v] = Float.POSITIVE_INFINITY;
-            fScore[v] = Float.POSITIVE_INFINITY;
+            gScore[v] = Double.POSITIVE_INFINITY;
+            fScore[v] = Double.POSITIVE_INFINITY;
         }
 
         //Set the start vertex distance s to 0.0
@@ -68,7 +68,7 @@ public class AstarLandmarks implements IShortestPathAlgorithm {
         }
     }
 
-    public float h(int n) {
+    public double h(int n) {
         return l(n) * heuristicWeight;
         //return getManhattanDistance(n, query.target) * heuristicWeight;
         /*var dx = Math.abs(n.X() - t.X());
@@ -76,7 +76,7 @@ public class AstarLandmarks implements IShortestPathAlgorithm {
         return (getDistanceInMetersSimple(n.X(), n.Y(), t.X(), t.Y())) * 1;*/
     }
 
-    public float getManhattanDistance(int v, int w) {
+    public double getManhattanDistance(int v, int w) {
         var n = dataModel.getVertex(v);
         var t = dataModel.getVertex(w);
         var x1 = n.X();
@@ -88,10 +88,13 @@ public class AstarLandmarks implements IShortestPathAlgorithm {
         return (delta_x + delta_y);
     }
 
-    public float l(int v) {
-        var max = Float.NEGATIVE_INFINITY;
-        for(var w : dataModel.getLandmarks()) {
-            var dist = Math.abs(getManhattanDistance(v, w) - getManhattanDistance(query.target, w));
+    public double l(int n) {
+        var max = Double.NEGATIVE_INFINITY;
+        for(var l : dataModel.getLandmarksTable().entrySet()) {
+            var distTable = l.getValue();
+            //var dist = Math.abs(getManhattanDistance(v, w) - getManhattanDistance(query.target, w));
+            if(distTable.length < n || distTable.length < query.target) continue;
+            var dist = Math.abs(distTable[n] - distTable[query.target]);
             if(dist > max) max = dist;
         }
         return max;
@@ -104,7 +107,7 @@ public class AstarLandmarks implements IShortestPathAlgorithm {
 
     @Override
     public boolean hasPath(int v) {
-        return distTo(v) < Float.POSITIVE_INFINITY;
+        return distTo(v) < Double.POSITIVE_INFINITY;
     }
 
     @Override

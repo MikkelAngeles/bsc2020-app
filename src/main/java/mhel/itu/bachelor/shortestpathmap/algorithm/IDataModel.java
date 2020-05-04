@@ -1,5 +1,6 @@
 package mhel.itu.bachelor.shortestpathmap.algorithm;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -13,7 +14,7 @@ public interface IDataModel {
 
     //Vertices
     IVertex[] getVertices();
-    void addVertex(int index, float x, float y);
+    void addVertex(int index, double x, double y);
     SimpleVertex getVertex(int index);
 
     //Edges
@@ -29,9 +30,9 @@ public interface IDataModel {
     boolean hasPropType(int index, EdgePropKey type);
 
     //Distance
-    float[] getDistances();
-    void addDist(int index, float dist);
-    float getDist(int index);
+    double[] getDistances();
+    void addDist(int index, double dist);
+    double getDist(int index);
 
     //Travel time
     int[] getTravelTimes();
@@ -41,10 +42,11 @@ public interface IDataModel {
     //Landmarks
     void generateRandomLandmarks(int count);
     int[] getLandmarks();
+    Map<Integer, double[]> getLandmarksTable();
 
     //Bounds
-    float getMaxX();
-    float getMinX();
-    float getMaxY();
-    float getMinY();
+    double getMaxX();
+    double getMinX();
+    double getMaxY();
+    double getMinY();
 }

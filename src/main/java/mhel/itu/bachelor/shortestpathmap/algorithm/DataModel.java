@@ -3,6 +3,7 @@ package mhel.itu.bachelor.shortestpathmap.algorithm;
 import edu.princeton.cs.algs4.Bag;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class DataModel implements IDataModel {
@@ -13,19 +14,21 @@ public class DataModel implements IDataModel {
     private SimpleEdge[] edges;
     private Bag<SimpleEdge>[] adj;
 
+    private Map<Integer, double[]> landmarksTable;
+
     private int[] landmarks;
     private int edgesCounter;
-    private float[] distances;
+    private double[] distances;
     private int[] travelTimes;
     private Map<Integer, Map<EdgePropKey, EdgePropValue>> propMap;
     private Map<String, List<Integer>> refMap;
     private Map<Integer, Stack<Integer>> lineMap;
 
     //Bounds
-    private float maxX = Float.NEGATIVE_INFINITY;
-    private float minX = Float.POSITIVE_INFINITY;
-    private float maxY = Float.NEGATIVE_INFINITY;
-    private float minY = Float.POSITIVE_INFINITY;
+    private double maxX = Double.NEGATIVE_INFINITY;
+    private double minX = Double.POSITIVE_INFINITY;
+    private double maxY = Double.NEGATIVE_INFINITY;
+    private double minY = Double.POSITIVE_INFINITY;
 
     //Graphical performance data structure
     private KdTree tree;
@@ -34,11 +37,11 @@ public class DataModel implements IDataModel {
     public DataModel(int V, int E) {
         this.V = V;
         this.E = E;
-        this.vertices = new SimpleVertex[V + 1];
-        this.edges = new SimpleEdge[E + 1];
-        this.distances = new float[E + 1];
-        this.travelTimes = new int[E + 1];
-        this.adj = (Bag<SimpleEdge>[]) new Bag[E + 1];
+        this.vertices = new SimpleVertex[V];
+        this.edges = new SimpleEdge[E];
+        this.distances = new double[E];
+        this.travelTimes = new int[E];
+        this.adj = (Bag<SimpleEdge>[]) new Bag[E];
         this.propMap = new HashMap<>();
         this.refMap = new HashMap<>();
         this.lineMap = new HashMap<>();
@@ -50,7 +53,7 @@ public class DataModel implements IDataModel {
     }
 
     @Override
-    public void addVertex(int index, float x, float y) {
+    public void addVertex(int index, double x, double y) {
         if(index > vertices.length) throw new IllegalArgumentException("Index is out of bounds");
         if(x > maxX) maxX = x;
         if(x < minX) minX = x;
@@ -67,6 +70,7 @@ public class DataModel implements IDataModel {
 
     @Override
     public int addEdge(int v, int w) {
+        for(var e : getAdjacent(v)) if(e.to().I() == w) throw new IllegalArgumentException("Edge collision");
         var index = edgesCounter++;
         edges[index] = new SimpleEdge(index, getVertex(v), getVertex(w));
         adj[v].add(edges[index]);
@@ -106,7 +110,7 @@ public class DataModel implements IDataModel {
     }
 
     @Override
-    public float[] getDistances() {
+    public double[] getDistances() {
         return distances;
     }
 
@@ -121,11 +125,11 @@ public class DataModel implements IDataModel {
     }
 
     @Override
-    public void addDist(int index, float dist) {
+    public void addDist(int index, double dist) {
         distances[index] = dist;
     }
     @Override
-    public float getDist(int index) {
+    public double getDist(int index) {
         if(index > distances.length) throw new IllegalArgumentException("Index is out of bounds");
         return distances[index];
     }
@@ -138,6 +142,15 @@ public class DataModel implements IDataModel {
         if(index > travelTimes.length) throw new IllegalArgumentException("Index is out of bounds");
         return travelTimes[index];
     }
+
+    public void addLandmarks(Map<Integer, double[]> landmarks) {
+        landmarksTable = landmarks;
+    }
+
+    public Map<Integer, double[]> getLandmarksTable() {
+        return landmarksTable;
+    }
+
 
     @Override
     public void addProperty(int index, Map<EdgePropKey, EdgePropValue> map) {
@@ -199,19 +212,19 @@ public class DataModel implements IDataModel {
     }
 
     @Override
-    public float getMaxX() {
+    public double getMaxX() {
         return maxX;
     }
     @Override
-    public float getMinX() {
+    public double getMinX() {
         return minX;
     }
     @Override
-    public float getMaxY() {
+    public double getMaxY() {
         return maxY;
     }
     @Override
-    public float getMinY() {
+    public double getMinY() {
         return minY;
     }
 
@@ -229,12 +242,12 @@ public class DataModel implements IDataModel {
         for (var edge : edges) {
             if(edge == null) continue;
 
-            var path = new Path2D.Float();
+            var path = new Path2D.Double();
             path.moveTo(edge.from().X(), edge.from().Y());
             path.lineTo(edge.to().X(), edge.to().Y());
 
 
-            //var sh = new Rectangle2D.Float(v.x, v.y, 0.000013f, 0.000013f);
+            //var sh = new Rectangle2D.Double(v.x, v.y, 0.000013f, 0.000013f);
             var esh = new EnhancedShape(path, edge.index());
             lst.add(esh);
         }
@@ -248,7 +261,7 @@ public class DataModel implements IDataModel {
             if(entry == null) continue;
 
             var lines = entry.getValue();
-            var path = new Path2D.Float();
+            var path = new Path2D.Double();
 
             var first = true;
             for(var line : lines) {
@@ -260,7 +273,7 @@ public class DataModel implements IDataModel {
                 else path.lineTo(vertex.X(), vertex.Y());
             }
 
-            //var sh = new Rectangle2D.Float(v.x, v.y, 0.000013f, 0.000013f);
+            //var sh = new Rectangle2D.Double(v.x, v.y, 0.000013f, 0.000013f);
             var esh = new EnhancedShape(path, entry.getKey());
             lst.add(esh);
         }
@@ -274,11 +287,11 @@ public class DataModel implements IDataModel {
         for (var edge : edges) {
             if(edge == null) continue;
 
-            var path = new Path2D.Float();
+            var path = new Path2D.Double();
             path.moveTo(edge.from().X(), edge.from().Y());
             path.lineTo(edge.to().X(), edge.to().Y());
 
-            //var sh = new Rectangle2D.Float(v.x, v.y, 0.000013f, 0.000013f);
+            //var sh = new Rectangle2D.Double(v.x, v.y, 0.000013f, 0.000013f);
             var esh = new EnhancedShape(path, edge.index());
             lst.add(esh);
         }
@@ -291,7 +304,7 @@ public class DataModel implements IDataModel {
         for (var v : vertices) {
             if(v == null) continue;
 
-            var sh = new Rectangle2D.Float(v.x, v.y, 0.000013f, 0.000013f);
+            var sh = new Rectangle2D.Double(v.x, v.y, 0.000013f, 0.000013f);
             var esh = new EnhancedShape(sh, v.i);
             lst.add(esh);
         }
@@ -305,15 +318,15 @@ public class DataModel implements IDataModel {
         return vertexTree;
     }
 
-    public SimpleVertex getVertexFromPoint(float x, float y) {
+    public SimpleVertex getVertexFromPoint(double x, double y) {
         //var rs = Arrays.stream(vertices).filter(e -> (e != null && e.x == x && e.y == y)).findFirst();
         //return rs.orElse(null);
-        var s = new Rectangle2D.Float(x, y, 0.000013f, 0.000013f);
+        var s = new Rectangle2D.Double(x, y, 0.000013f, 0.000013f);
 
 
         for(var v : vertices) {
             if(v == null) continue;;
-            var t = new Rectangle2D.Float(v.x, v.y, 0.000013f, 0.000013f);
+            var t = new Rectangle2D.Double(v.x, v.y, 0.000013f, 0.000013f);
             if(s.intersects(t)) return v;
         }
         return null;

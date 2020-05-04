@@ -1,12 +1,12 @@
 package mhel.itu.bachelor.shortestpathmap.algorithm;
 
 public class BoundsDTO {
-    public float maxX;
-    public float minX;
-    public float maxY;
-    public float minY;
+    public double maxX;
+    public double minX;
+    public double maxY;
+    public double minY;
 
-    public BoundsDTO(float maxX, float minX, float maxY, float minY) {
+    public BoundsDTO(double maxX, double minX, double maxY, double minY) {
         this.maxX = maxX;
         this.minX = minX;
         this.maxY = maxY;
