@@ -7,14 +7,13 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 
 public class LandmarksProcessor {
 
-    public static void processDistToLandmark(IDataModel M, SimpleGraph G, IShortestPathAlgorithm sp, int target, String dir) {
+    public static void processDistToLandmark(IDataModel M, SimpleGraph G, DistanceOracle D, IShortestPathAlgorithm sp, int landmark, String fileName) {
         var Q = new RouteQuery();
-        Q.setTarget(target);
+        Q.setSource(landmark); //reversed because the graph is expected to be reversed.
+
         Q.addCriterion(
                 RouteCriteriaEvaluationType.DISTANCE,
                 new EdgePropSet(EdgePropKey.DEFAULT, EdgePropValue.DEFAULT),
@@ -22,30 +21,53 @@ public class LandmarksProcessor {
         );
 
         long start = System.nanoTime();
-        System.out.println("Processing " + M.V() + " distances to landmark vertex" + target);
+        System.out.println("Processing " + M.V() + " distances to landmark vertex" + landmark);
+
+        sp.perform(G, M, D, Q);
 
         try {
-            var filePath = dir + "tmplandmark"+target+".txt";
-            var fileObj = new File(filePath);
+            var fileObj = new File(fileName);
             if (fileObj.createNewFile()) System.out.println("File created: " + fileObj.getName());
             else System.out.println(fileObj.getName() + " already exists. Overriding.");
 
-            var myWriter = new FileWriter(filePath);
+            var myWriter = new FileWriter(fileName);
             var bw = new BufferedWriter(myWriter);
 
-            bw.write(target+"");
-            bw.newLine();
-            bw.write(M.V()+"");
+            bw.write(landmark+"");
             bw.newLine();
 
+            var i = 0;
+            long lineStart = System.nanoTime();
             for(var v : M.getVertices()) {
-                Q.setSource(v.I());
-                sp.perform(G, M, Q);
-
                 //Consider skipping line entirely if there is no distance.
-                var dist = sp.hasPath(target) ? sp.distTo(target) : Double.POSITIVE_INFINITY;
+                if(!sp.hasPath(v.I())) continue;
+                var dist = sp.distTo(v.I());
                 bw.write(v.I() + " " + dist);
                 bw.newLine();
+                i++;
+                if(i % 100 == 0) {
+                    var eMs = (((System.nanoTime() - lineStart) / 1000000));
+                    var eSec = eMs / 1000;
+                    var eMin = eSec / 60;
+                    var eHr  = eMin / 60;
+                    var eDay = eHr / 24;
+                    var eSecondsRounded = (eSec - (eMin * 60));
+                    var eMinRounded = eMin - (eHr * 60);
+                    var eHrRounded = eHr - (eDay * 60);
+                    System.out.println("Update: Processed " + i + " vertices, "+ (M.V() - i) + " remaining, elapsed time (" +  eHrRounded +"h "+ eMinRounded + "m "+ eSecondsRounded +"s)");
+
+                    var linesDoneAvgTime = eMs / i;
+                    var rLines = M.V() - i;
+                    var rMs = rLines * linesDoneAvgTime;
+                    var rSec = rMs / 1000;
+                    var rMin = rSec / 60;
+                    var rHr = rMin / 60;
+                    var rDay = rHr / 24;
+                    var rSecRounded = (rSec - (rMin * 60));
+                    var rMinRounded = rMin - (rHr * 60);
+                    var rHrRounded = rHr - (rDay * 60);
+                    System.out.println("Est. time remaining (" +  rHrRounded +"h "+ rMinRounded + "m "+ rSecRounded+"s)" );
+                }
             }
             bw.close();
             myWriter.close();
@@ -54,38 +76,101 @@ public class LandmarksProcessor {
             e.printStackTrace();
         }
         long end = System.nanoTime();
-        System.out.println("Done! Processed " + M.V() +" vertices in (" + (end-start/1000000) + " ms)");
+        long delta = end - start;
+        long ms  = delta / 1000000;
+        long sec = ms / 1000;
+        long min = sec / 60;
+        long hr  = min / 60;
+        long d  = min / 60;
+
+        var rSecRounded = (sec - (min * 60));
+        var rMinRounded = min - (hr * 60);
+        var rHrRounded = hr - (d * 60);
+        System.out.println("Done! Processed " + M.V() +" vertices in (" +  rHrRounded +"h "+ rMinRounded + "m "+ rSecRounded+"s)");
     }
 
-    public static void createLandmarksHil() {
-        var dir     = "resources/json/hil/";
-        var pa      = dir + "hil.json";
-        var list    = new int[] {22667, 28460, 8231, 20792, 9840, 26338, 8422, 3703, 1962, 22583, 27380, 18166, 15417, 1757, 14, 22970};
+    public static void processRandomLandmarksFromJson(int count, String dir, String file) {
+        var pa  = dir + file;
+        var P   = new GraphParser();
+        var M   = P.parseFromMyJsonReverseEdges(pa);
+        var G   = M.generateGraph();
+        M.generateRandomLandmarks(count);
 
-        for(var l : list) {
-            Runnable task = () -> {
-                var P = new GraphParser();
-                var M = P.parseFromMyJson(pa);
-                var G = M.generateGraph();
-                var D = new Dijkstra();
-                processDistToLandmark(M, G, D, l, dir);
-            };
-            var t = new Thread(task);
-            new Thread(t).start();
+        var dOracle = new DistanceOracle(M);
+
+
+        var D   = new Dijkstra();
+        var i = 0;
+        for(var l : M.getLandmarks()) {
+            var fileName = dir+"/landmarks/dist/landmark-dist-"+i+".txt";
+            processDistToLandmark(M, G, dOracle, D, l, fileName);
+            i++;
         }
     }
 
-    public static class RunnableProcessing implements Runnable {
-        @Override
-        public void run() {
+    public static void processLandmarksFromJson(int[] list, String dir, String file) {
+        var pa  = dir + file;
+        var P   = new GraphParser();
+        var M   = P.parseFromMyJsonReverseEdges(pa);
+        var G   = M.generateGraph();
+        var D   = new Dijkstra();
+        var dOracle = new DistanceOracle(M);
 
+        for(var l : list) {
+            processDistToLandmark(M, G, dOracle, D, l, dir);
+        }
 
+    }
+
+    public static void processRandomLandmarksFromDimacs(int count, String dir, In v, In d, In t) {
+        var P   = new GraphParser();
+        var M   = P.parseDimacsFromIn(v,d,t, true);
+        var G   = M.generateGraph();
+        var D   = new Dijkstra();
+        M.generateRandomLandmarks(count);
+
+        var dOracle = new DistanceOracle(M);
+
+        var i = 0;
+        for(var l : M.getLandmarks()) {
+            var fileName = dir+"/landmarks/dist/landmark-dist-"+i+".txt";
+            processDistToLandmark(M, G, dOracle, D, l, fileName);
+            i++;
+        }
+    }
+
+    public static void processLandmarksFromDimacs(int[] list, String dir, In v, In d, In t) {
+        var P   = new GraphParser();
+        var M   = P.parseDimacsFromIn(v,d,t, true);
+        var G   = M.generateGraph();
+        var D   = new Dijkstra();
+
+        var dOracle = new DistanceOracle(M);
+
+        var i = 0;
+        for(var l : list) {
+            var fileName = dir+"/landmarks/dist/landmark-dist-"+i+".txt";
+            processDistToLandmark(M, G, dOracle, D, l, fileName);
+            i++;
         }
     }
 
     public static void main(String[] args) {
-
-        createLandmarksHil();
-
+       /* processRandomLandmarksFromDimacs(
+                16,
+                "resources/dimacs/nyc/",
+                new In("resources/dimacs/nyc/vertices.co"),
+                new In("resources/dimacs/nyc/distance.gr"),
+                new In("resources/dimacs/nyc/time.gr")
+        );*/
+       processLandmarksFromDimacs(
+               new int[] {4245, 191107, 76753, 84691, 161107, 178605, 139057, 4145, 4059, 193458, 102189, 95880, 116975, 74928, 80315, 257508},
+                "resources/dimacs/nyc/",
+                new In("resources/dimacs/nyc/vertices.co"),
+                new In("resources/dimacs/nyc/distance.gr"),
+                new In("resources/dimacs/nyc/time.gr")
+        );
+        //processRandomLandmarksFromJson(16, "resources/json/hil/", "hil.json");
+        //processLandmarksFromJson(new int[] {22667, 28460, 8231, 20792, 9840, 26338, 8422, 3703, 1962, 22583, 27380, 18166, 15417, 1757, 14, 22970}, "resources/json/hil/", "hil.json");
     }
 }

@@ -14,7 +14,7 @@ public class DataModel implements IDataModel {
     private SimpleEdge[] edges;
     private Bag<SimpleEdge>[] adj;
 
-    private Map<Integer, double[]> landmarksTable;
+    private Map<Integer, HashMap<Integer, Double>> landmarksTable;
 
     private int[] landmarks;
     private int edgesCounter;
@@ -144,14 +144,13 @@ public class DataModel implements IDataModel {
         return travelTimes[index];
     }
 
-    public void addLandmarks(Map<Integer, double[]> landmarks) {
+    public void addLandmarks(Map<Integer, HashMap<Integer, Double>> landmarks) {
         landmarksTable = landmarks;
     }
 
-    public Map<Integer, double[]> getLandmarksTable() {
+    public Map<Integer, HashMap<Integer, Double>> getLandmarksTable() {
         return landmarksTable;
     }
-
 
     @Override
     public void addProperty(int index, Map<EdgePropKey, EdgePropValue> map) {

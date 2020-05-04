@@ -15,7 +15,10 @@ public class RouteController {
     DataModel model;
     IShortestPathAlgorithm spAlgorithm;
     SimpleGraph G;
-    GraphParser P = new GraphParser();
+    DistanceOracle D = new DistanceOracle();
+    GraphParser P  = new GraphParser();
+
+
     @GetMapping("/bounds")
     public BoundsDTO bounds() {
         return new BoundsDTO(model.getMaxX(), model.getMinX(), model.getMaxY(), model.getMinY());
@@ -25,6 +28,7 @@ public class RouteController {
     public GraphDTO loadJsonHi() {
         var pa = "resources/json/hil/hil.json";
         model = P.parseFromMyJson(pa);
+        D = new DistanceOracle(model);
         return getGraph();
     }
 
@@ -33,7 +37,8 @@ public class RouteController {
         String v = "resources/dimacs/nyc/vertices.co";
         String d = "resources/dimacs/nyc/distance.gr";
         String t = "resources/dimacs/nyc/time.gr";
-        model = P.ParseFromIn(new In(v), new In(d), new In(t));
+        model = P.parseDimacsFromIn(new In(v), new In(d), new In(t), false);
+        D = new DistanceOracle(model);
         return getGraph();
     }
 
@@ -158,7 +163,7 @@ public class RouteController {
     public RouteResultDTO getRoute(RouteQuery q) {
         var dto         = new RouteResultDTO();
         long before     = System.nanoTime();
-        spAlgorithm.perform(G, model, q);
+        spAlgorithm.perform(G, model, D, q);
         long after      = System.nanoTime();
         dto.elapsed     = after - before;
         dto.hasPath     = spAlgorithm.hasPath(q.getTarget());

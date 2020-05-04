@@ -6,7 +6,6 @@ import edu.princeton.cs.algs4.Stack;
 import java.util.LinkedList;
 import java.util.Queue;
 
-
 public class Astar implements IShortestPathAlgorithm {
     private IEdge[] edgeTo;
     private double[] gScore;
@@ -16,11 +15,12 @@ public class Astar implements IShortestPathAlgorithm {
     private IDataModel dataModel;
     private RouteQuery query;
     private double heuristicWeight;
+    private DistanceOracle distanceOracle;
 
     public Astar(double h) { this.heuristicWeight = h;}
 
     @Override
-    public void perform(SimpleGraph G, IDataModel dm, RouteQuery query) {
+    public void perform(SimpleGraph G, IDataModel dm, DistanceOracle d, RouteQuery query) {
         for (var e : G.edges()) {
             if(e == null) continue;
             if (dm.getDist(e.index()) < 0)
@@ -28,6 +28,7 @@ public class Astar implements IShortestPathAlgorithm {
         }
         this.dataModel = dm;
         this.query = query;
+        this.distanceOracle = d;
         visited = new LinkedList<>();
         edgeTo = new SimpleEdge[G.getV()];     //Assign array size from number of vertices in graph
 
@@ -55,32 +56,20 @@ public class Astar implements IShortestPathAlgorithm {
 
     private void relax(IEdge e) {
         int v = e.from().I(), w = e.to().I();
-
         visited.add(w);
-        var tentative_gScore = gScore[v] +  dataModel.getDist(e.index());
-
+        var tentative_gScore = gScore[v] + distanceOracle.dist(e.index());
         if(tentative_gScore < gScore[w]) {
             edgeTo[w] = e;
             gScore[w] = tentative_gScore;
             fScore[w] = gScore[w] + h(w);
             if(!pq.contains(w)) pq.insert(w, fScore[w]);
-            else if (pq.keyOf(w) != fScore[w]) pq.decreaseKey(w, fScore[w]); //HACK - figure out why it ever happens in the first place.
+            else if(pq.keyOf(w) != fScore[w]) pq.decreaseKey(w, fScore[w]);
         }
     }
 
     public double h(int v) {
-        var n = dataModel.getVertex(v);
-        var t = dataModel.getVertex(query.target);
-        var x1 = n.X();
-        var y1 = n.Y();
-        var x2 = t.X();
-        var y2 = t.Y();
-        var delta_x = Math.abs(x2 - x1);
-        var delta_y = Math.abs(y2 - y1);
-        return (delta_x + delta_y) * heuristicWeight;
-        /*var dx = Math.abs(n.X() - t.X());
-        var dy = Math.abs(n.Y() - t.Y());
-        return (getDistanceInMetersSimple(n.X(), n.Y(), t.X(), t.Y())) * 1;*/
+        var w = distanceOracle.haversine(v, query.target);
+        return w * heuristicWeight;
     }
 
     @Override

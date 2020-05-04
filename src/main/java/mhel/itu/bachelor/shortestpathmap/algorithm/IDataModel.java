@@ -1,9 +1,6 @@
 package mhel.itu.bachelor.shortestpathmap.algorithm;
 
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public interface IDataModel {
     //Basic information
@@ -42,7 +39,7 @@ public interface IDataModel {
     //Landmarks
     void generateRandomLandmarks(int count);
     int[] getLandmarks();
-    Map<Integer, double[]> getLandmarksTable();
+    Map<Integer, HashMap<Integer, Double>> getLandmarksTable();
 
     //Bounds
     double getMaxX();

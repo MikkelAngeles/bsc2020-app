@@ -11,11 +11,12 @@ public class Dijkstra implements IShortestPathAlgorithm {
     private Queue<Integer> visited;
     private IDataModel dataModel;
     private RouteQuery query;
+    private DistanceOracle distanceOracle;
 
     public Dijkstra() { }
 
     @Override
-    public void perform(SimpleGraph G, IDataModel dm, RouteQuery query) {
+    public void perform(SimpleGraph G, IDataModel dm, DistanceOracle d, RouteQuery query) {
         for (var e : G.edges()) {
             if(e == null) continue;
             if (dm.getDist(e.index()) < 0)
@@ -26,6 +27,7 @@ public class Dijkstra implements IShortestPathAlgorithm {
         edgeTo = new SimpleEdge[G.getV()];     //Assign array size from number of vertices in graph
         this.dataModel = dm;
         this.query = query;
+        this.distanceOracle = d;
 
         //Add POSITIVE_INFINITY value to every vertex
         for (int v = 0; v < G.getV(); v++)
@@ -37,34 +39,13 @@ public class Dijkstra implements IShortestPathAlgorithm {
         // relax vertices in order of distance from s
         pq = new IndexMinPQ<>(G.getV());
         pq.insert(query.getSource(), distTo[query.getSource()]);
-        var found = false;
 
-        while (!pq.isEmpty() && !found) {
+        while (!pq.isEmpty()) {
             int v = pq.delMin();
-            if(v == query.getTarget())  {
-                found = true;
-                continue;
-            }
             for (var e : G.adj(v)) {
-                relax(e, cost(e.index()));
+                relax(e, d.dist(e.index()));
             }
         }
-    }
-
-    public double cost(int edge) {
-        var accum = 0f;
-        for(var c : query.getCriteria()) {
-            if(dataModel.hasPropType(edge, c.getSet().getType())) {
-                if(RouteCriteriaEvaluationType.DISTANCE == c.getEvaluationType()) {
-                    accum += dataModel.getDist(edge) * c.getWeightFactor();
-                } else if (RouteCriteriaEvaluationType.TIME == c.getEvaluationType()) {
-                    accum += dataModel.getTravelTime(edge) * c.getWeightFactor();
-                } else if (RouteCriteriaEvaluationType.COUNT == c.getEvaluationType()) {
-                    accum += c.getWeightFactor();
-                }
-            }
-        }
-        return accum;
     }
 
     private void relax(IEdge e, double weight) {

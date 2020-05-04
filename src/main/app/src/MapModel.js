@@ -82,6 +82,7 @@ export function useMapModel (props) {
 
         let path = baseUrl + graphUrl(selectedGraph);
         setGraph(graphTemplate);
+        setResults([]);
         axios.get(path)
             .then((response) => {
                 if(response.status === 200 && response.data) {
@@ -91,11 +92,7 @@ export function useMapModel (props) {
                 }
                 console.log(response);
             })
-            .then(response => console.log(response))
-            .catch((e) => {
-                console.log(e.response);
-                alertModel.error(e.response.data.status + " " + e.response.data.message)
-            })
+            .catch((e) => alertModel.error(e.toString()))
             .finally(() => setIsLoading(false))
     }
 
@@ -140,7 +137,7 @@ export function useMapModel (props) {
 
     useEffect(() => {
         getRoute();
-    }, [selectionModel.query]);
+    }, [selectionModel.query.target]);
 
     useEffect(() => {
         loadGraph();

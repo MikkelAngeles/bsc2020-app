@@ -1,6 +1,5 @@
 package mhel.itu.bachelor.shortestpathmap.algorithm;
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -8,15 +7,25 @@ import edu.princeton.cs.algs4.In;
 
 import java.awt.geom.Point2D;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class GraphParser {
     //String path = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\json\\route_line.geojson";
     public ParsedGraph pg;
+    public DistanceOracle distanceOracle;
 
     public GraphParser() {}
 
-    public DataModel ParseFromIn(In vertices, In edges, In travelTime) {
+    public GraphParser(DistanceOracle d) {
+        this.distanceOracle = d;
+    }
+
+    public DataModel parseDimacsFromIn(In vertices, In edges, In travelTime, boolean reversedEdges) {
         vertices.readLine();
         vertices.readLine();
         vertices.readLine();
@@ -102,38 +111,80 @@ public class GraphParser {
             dm.addVertex(v.getKey(), cur.getX(), cur.getY());
         }
         //Cleaned edges
-        try {
-            for (var t : tmpEdges) {
-                var e = dm.addEdge(t.v, t.w);
-                dm.addDist(e, t.dist);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        for (var t : tmpEdges) {
+            var e = reversedEdges ? dm.addEdge(t.w, t.v) : dm.addEdge(t.v, t.w);
+            dm.addDist(e, t.dist);
         }
+
+        var landmarks = loadLandmarks("resources/dimacs/nyc/landmarks/dist");
+        dm.addLandmarks(landmarks);
 
         return dm;
     }
 
-    public Map<Integer, double[]> loadLandmarks() {
-        var lst = new HashMap<Integer, double[]>();
+    public Map<Integer, HashMap<Integer, Double>> loadLandmarks(String path) {
+
+        var files = new ArrayList<String>();
+        try (Stream<Path> walk = Files.walk(Paths.get(path))) {
+            files = (ArrayList<String>) walk.filter(Files::isRegularFile).map(x -> x.toString()).collect(Collectors.toList());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        var lst = new HashMap<Integer, HashMap<Integer, Double>>();
 
         //foreach landmark
-        for(var i = 1; i < 16; i ++) {
-            var lm = "resources/json/hil/landmark"+i+".txt";
-            var landmarks = new In(lm);
+        for(var p : files) {
+            var landmarks = new In(p);
             var id = landmarks.readInt();
-            var size = landmarks.readInt();
-            var arr = new double[size + 1];
+            var map = new HashMap<Integer, Double>();
             while (!landmarks.isEmpty()) {
                 var v = landmarks.readInt();
                 var d = landmarks.readDouble();
-                arr[v] = d;
+                map.put(v, d);
             }
-            lst.put(id, arr);
+            lst.put(id, map);
         }
         return lst;
     }
 
+
+    public DataModel parseFromMyJsonReverseEdges(String path) {
+        JsonObject jsonObject = null;
+
+        try (var r = new FileReader(path)) {
+            jsonObject = new Gson().fromJson(r, JsonObject.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        var V               = jsonObject.getAsJsonPrimitive("V").getAsInt();
+        var E               = jsonObject.getAsJsonPrimitive("E").getAsInt();
+        var vertices        = jsonObject.getAsJsonArray("vertices");
+        var edges           = jsonObject.getAsJsonArray("edges");
+
+        var dm = new DataModel(V, E);
+        var i = 0;
+        for (var v : vertices) {
+            var cur = v.getAsJsonArray();
+            var x = cur.get(0).getAsDouble();
+            var y = cur.get(1).getAsDouble();
+            dm.addVertex(i++, x, y);
+        }
+
+        for (var e : edges) {
+            var cur = e.getAsJsonObject();
+            var v = cur.getAsJsonPrimitive("v").getAsInt();
+            var w = cur.getAsJsonPrimitive("w").getAsInt();
+            var d = cur.getAsJsonPrimitive("dist").getAsDouble();
+            var newEdge = dm.addEdge(w, v); //Reversed edges.
+            dm.addDist(newEdge, d);
+        }
+
+        //var landmarks = loadLandmarks();
+        //dm.addLandmarks(landmarks);
+        return dm;
+    }
 
     public DataModel parseFromMyJson(String path) {
         JsonObject jsonObject = null;
@@ -167,7 +218,7 @@ public class GraphParser {
             dm.addDist(newEdge, d);
         }
 
-        var landmarks = loadLandmarks();
+        var landmarks = loadLandmarks("resources/json/hil/landmarks/dist");
         dm.addLandmarks(landmarks);
         return dm;
     }
@@ -231,9 +282,6 @@ public class GraphParser {
 
                 vertexIndex = indexLookup.size();
 
-                /*var count = duplicates.get(to);
-                duplicates.put(to, count != null ? (count + 1) : 1);*/
-
                 pg.map.add(to);
                 var curr_set = duplicates.get(from);
                 var dup = curr_set != null && curr_set.contains(to);
@@ -242,7 +290,7 @@ public class GraphParser {
                     continue;
                 }
                 else {
-                    var dist = calculateDistance((double) from.getX(), (double) from.getY(), (double) to.getX(),(double) to.getY());
+                    var dist = distanceOracle.haversine(from.getX(), from.getY(), to.getX(), to.getY());
                     var edgeTo = new ParsedEdge(from, to, dist, ref, i);
 
                     for(var ps : propSet.entrySet()) {
@@ -308,32 +356,7 @@ public class GraphParser {
         return  dm;
     }
 
-    //https://github.com/jasonwinn/haversine/blob/master/Haversine.java
-    public double calculateDistance(double lat_from,  double lon_from, double lat_to, double lon_to) {
-        var EARTH_RADIUS = 6371f; // Approx Earth radius in KM
-        var dLat  = (double) Math.toRadians(lat_to - lat_from);
-        var dLong = (double) Math.toRadians(lon_to - lon_from);
 
-        lat_from = (double) Math.toRadians(lat_from);
-        lat_to   = (double) Math.toRadians(lat_to);
-
-        var a = (double) Math.pow(Math.sin(dLat / 2), 2) + Math.cos(lat_from) * Math.cos(lat_to) * Math.pow(Math.sin(dLong / 2), 2);
-        var c = (double) (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-        return EARTH_RADIUS * c;
-    }
-
-    // Equirectangular approximation (Pythagoras’ theorem) Use if performance is an issue and accuracy less important, for small distances.
-    public static double getDistanceInMetersSimple(double lat_from,  double lon_from, double lat_to, double lon_to){
-        var EARTH_RADIUS = 6371f; // Approx Earth radius in KM
-        double lat1             = toRadians(lat_from);
-        double lat2             = toRadians(lat_to);
-
-        double x = toRadians(Math.abs(lon_from - lon_to) * Math.cos((lat1 + lat2) / 2));
-        double y = toRadians(Math.abs(lat1 - lat2));
-        double distance = new Double(Math.sqrt( x*x + y*y ) * EARTH_RADIUS).doubleValue();
-
-        return distance;
-    }
 
     public EdgePropKey keyToEdgePropertyType(String key) {
         switch (key) {
