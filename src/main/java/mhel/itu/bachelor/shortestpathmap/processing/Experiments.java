@@ -6,6 +6,9 @@ import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.StdOut;
 import mhel.itu.bachelor.shortestpathmap.algorithm.*;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Calendar;
@@ -16,7 +19,7 @@ import static edu.princeton.cs.algs4.StdStats.min;
 
 public class Experiments {
 
-    public static void spExperiment(IShortestPathAlgorithm sp, DataModel M, SimpleGraph G, ArrayList<RouteQuery> Q, DistanceOracle D, int n, boolean printProgress) {
+    public static void spExperiment(String title, IShortestPathAlgorithm sp, DataModel M, SimpleGraph G, ArrayList<RouteQuery> Q, DistanceOracle D, int n, boolean printProgress) {
         var distArr = new double[n];
         var elapsedArr = new double[n];
         var i = 0;
@@ -31,6 +34,7 @@ public class Experiments {
         }
         prettyPintVerboseTable(distArr, elapsedArr);
         printFullLaTeXTable("", n, G.getV(), G.getE() ,distArr, elapsedArr);
+        printToLogFile(title, G.getV(), G.getE(), distArr, elapsedArr);
     }
 
     //Experiment used in section about Dijkstra's with 1000EWD.txt, 10000EWD.txt and largeEWD.txt
@@ -93,7 +97,7 @@ public class Experiments {
     }
 
 
-    public static void dijkstraDimacsExperiment(String dimacsName, int n, boolean printProgress) {
+    public static void spDimacsExperiment(String title, IShortestPathAlgorithm alg, String dimacsName, int n, boolean printProgress) {
         var P   = new GraphParser();
 
         long graphStart = System.currentTimeMillis();
@@ -111,6 +115,15 @@ public class Experiments {
         System.out.println(timeStamp() + "Generating graph..");
         var G   = M.generateGraph();
         var D   = new DistanceOracle(M);
+
+        graphEnd = System.currentTimeMillis();
+        System.out.println(timeStamp() + "Graph done loading in "+ (graphEnd - graphStart)+"ms -> V: " + G.getV() + " E: " + G.getE());
+        System.out.println(timeStamp() + "Running " + n + " queries, each with a random source s and target t.");
+        var formatTitle = title+"-"+dimacsName+"-dimacs-"+n+"-queries";
+        spExperiment(formatTitle, alg, M, G, generateRandomQueries(n, M.V()), D, n, printProgress);
+    }
+
+    public static ArrayList<RouteQuery> generateRandomQueries(int n, int V) {
         var rnd = new Random();
         var list = new ArrayList<RouteQuery>();
         for(var i = 0; i < n; i++) {
@@ -120,18 +133,28 @@ public class Experiments {
                     new EdgePropSet(EdgePropKey.DEFAULT, EdgePropValue.DEFAULT),
                     1f
             );
-            Q.setSource(rnd.nextInt(M.V()));
-            Q.setTarget(rnd.nextInt(M.V()));
+            Q.setSource(rnd.nextInt(V));
+            Q.setTarget(rnd.nextInt(V));
             list.add(Q);
         }
-        graphEnd = System.currentTimeMillis();
-        if(printProgress) System.out.println(timeStamp() + "Graph done loading in "+ (graphEnd - graphStart)+"ms -> V: " + G.getV() + " E: " + G.getE());
-        if(printProgress) System.out.println(timeStamp() + "Running " + n + " queries, each with a random source s and target t.");
-        spExperiment(new Dijkstra(), M, G, list, D, n, true);
+        return list;
+    }
+
+    public static void spJsonExperiment(String title, IShortestPathAlgorithm alg, String fileName, int n, boolean printProgress) {
+        var P   = new GraphParser();
+        var M   = P.parseFromMyJson("resources/json/"+fileName+"/"+fileName+".json");
+        var formatTitle = title+"-"+fileName+"-"+n+"";
+        buildSpExperiment(formatTitle, alg, M, n, printProgress);
+    }
+
+    public static void buildSpExperiment(String title, IShortestPathAlgorithm alg, DataModel M, int n, boolean printProgress) {
+        var G   = M.generateGraph();
+        var D   = new DistanceOracle(M);
+        System.out.println(timeStamp() + "Running " + n + " queries, each with a random source s and target t.");
+        spExperiment(title, alg, M, G, generateRandomQueries(n, M.V()), D, n, printProgress);
     }
 
     public static void main(String[] args) {
-
         //dijkstraSPExperiment(10000, "resources/algs4/", "1000EWD.txt", false);
         //dijkstraSPExperiment(10000, "resources/algs4/", "10000EWD.txt", false);
         //dijkstraSPExperiment(500, "resources/algs4/", "largeEWD.txt", true);
@@ -140,8 +163,27 @@ public class Experiments {
 
         //dijkstraSPExtendedAstarSPExperiment(10000, "resources/algs4/", "1000EWD.txt", false);
 
-        dijkstraDimacsExperiment("nyc", 10000, true);
 
+        spDimacsExperiment("dijkstra", new Dijkstra(), "fla", 1000, true);
+        spDimacsExperiment("astar-1", new Astar(1), "fla", 1000, true);
+
+        /*
+        spDimacsExperiment("astar-10", new Astar(10), "nyc", 1000, true);
+        spDimacsExperiment("astar-100", new Astar(100), "nyc", 1000, true);
+        spDimacsExperiment("astar-1000", new Astar(1000), "nyc", 1000, true);
+        spDimacsExperiment("astar-10000", new Astar(10000), "nyc", 1000, true);
+
+         */
+        //spJsonExperiment("Dijkstra", new Dijkstra(), "hil", 100000, false);
+        //spJsonExperiment("astar-0", new Astar(0), "hil", 10000, false);
+        //spJsonExperiment("astar-0.25", new Astar(0.25), "hil", 10000, false);
+        //spJsonExperiment("astar-0.5", new Astar(0.5), "hil", 10000, false);
+        //spJsonExperiment("astar-0.75", new Astar(0.75), "hil", 10000, false);
+        //spJsonExperiment("astar-2.5", new Astar(2.5), "hil", 10000, false);
+        //spJsonExperiment(new Astar(1), "hil", 10000, false);
+        //spJsonExperiment(new Astar(1.5), "hil", 1000, false);
+        //spJsonExperiment(new Astar(2), "hil", 1000, false);
+        //dijkstraDimacsExperiment("nyc", 10000, false);
      /*   var n   = 5000;
         var P   = new GraphParser();
         //var M   = P.parseFromMyJson("resources/json/hil/hil.json");
@@ -193,6 +235,7 @@ public class Experiments {
     }
 
     public static void prettyPintVerboseTable(double[] arr1, double[] arr2) {
+        StdOut.printf("           %10s %10s \n", "distance", "time (ms)");
         StdOut.printf("       min %10.3f%10.3f\n", min(arr1), min(arr2));
         StdOut.printf("      mean %10.3f%10.3f\n", mean(arr1),mean(arr2));
         StdOut.printf("       max %10.3f%10.3f\n", max(arr1), max(arr2));
@@ -210,7 +253,7 @@ public class Experiments {
 
     //Based on my LaTeX report design.
     public static void printFullLaTeXTable(String fileName, int n, int v, int e, double[] arr1, double[] arr2) {
-        StdOut.println("\\multirow{2}{12em}{"+fileName+"} & \\multirow{2}{4em}{"+v+"} & \\multirow{2}{4em}{"+e+"} & \\multirow{2}{4em}{"+n+"}");
+        StdOut.println("\\multirow{2}{8em}{"+fileName+"} & \\multirow{2}{4em}{"+v+"} & \\multirow{2}{4em}{"+e+"} & \\multirow{2}{4em}{"+n+"}");
 
         StdOut.printf("&  %12s  & %10.3f    & %10.3f    & %10.3f  & %10.3f \\\\ \n", "dist" ,min(arr1),mean(arr1),max(arr1),stddev(arr1));
         StdOut.printf("& & & & %12s  & %10.0f    & %10.0f    & %10.0f  & %10.0f \\\\ \n", "time (ms)",min(arr2),mean(arr2),max(arr2),stddev(arr2));
@@ -222,6 +265,54 @@ public class Experiments {
         var cal = Calendar.getInstance();
         var timeOnly = new SimpleDateFormat("HH:mm:ss");
         return timeOnly.format(cal.getTime()) + ": ";
+    }
+
+    public static void printToLogFile(String title, int v, int e, double[] arr1, double[] arr2) {
+        try {
+            var file = "logs/experiments/"+title+".txt";
+            var fileObj = new File(file);
+            if (fileObj.createNewFile()) System.out.println("File created: " + fileObj.getName());
+            else System.out.println(fileObj.getName() + " already exists. Overriding.");
+
+            var myWriter = new FileWriter(file);
+            var bw = new BufferedWriter(myWriter);
+            var n = arr1.length;
+            bw.write(title);
+            bw.newLine();
+
+            bw.write(n+"");
+            bw.newLine();
+
+            bw.newLine();
+            bw.write("----------------------------Results---------------------------------");
+            bw.newLine();
+            bw.write(String.format("           %10s %10s \n", "distance", "time (ms)")+"");
+            bw.write(String.format("       min %10.3f%10.3f\n", min(arr1), min(arr2)));
+            bw.write(String.format("      mean %10.3f%10.3f\n", mean(arr1),mean(arr2)));
+            bw.write(String.format("       max %10.3f%10.3f\n", max(arr1), max(arr2)));
+            bw.write(String.format("    stddev %10.3f%10.3f\n", stddev(arr1), stddev(arr2)));
+            bw.write(String.format("       var %10.3f%10.3f\n", var(arr1), var(arr2)));
+            bw.write(String.format("   stddevp %10.3f%10.3f\n", stddevp(arr1), stddevp(arr2)));
+            bw.write(String.format("      varp %10.3f%10.3f\n", varp(arr1), varp(arr2)));
+            bw.newLine();
+            bw.newLine();
+            bw.newLine();
+            bw.newLine();
+            bw.newLine();
+            bw.write("--------------------------------------------------------------LaTeX table-------------------------------------------------------------------");
+            bw.newLine();
+            bw.write(String.format("\\multirow{2}{8em}{"+title+"} & \\multirow{2}{4em}{"+v+"} & \\multirow{2}{4em}{"+e+"} & \\multirow{2}{4em}{"+n+"}"));
+            bw.newLine();
+            bw.write(String.format("&  %12s  & %10.3f    & %10.3f    & %10.3f  & %10.3f \\\\ \n", "dist" ,min(arr1),mean(arr1),max(arr1),stddev(arr1)));
+            bw.write(String.format("& & & & %12s  & %10.0f    & %10.0f    & %10.0f  & %10.0f \\\\ \n", "time (ms)",min(arr2),mean(arr2),max(arr2),stddev(arr2)));
+            bw.write(String.format("\\hline"));
+            bw.newLine();
+            bw.close();
+            myWriter.close();
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
 

@@ -84,7 +84,6 @@ public class DistanceOracle {
         return max;
     }
 
-
     public double accumRealDist(List<Double> list) {
         return list.stream().mapToDouble(e -> (e * 2) * distUpper).sum();
     }

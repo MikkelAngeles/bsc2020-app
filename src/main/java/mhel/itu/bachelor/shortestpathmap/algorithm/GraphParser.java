@@ -25,6 +25,13 @@ public class GraphParser {
         this.distanceOracle = d;
     }
 
+    public DataModel parseFromDimacsPath(String path, boolean reversedEdges) {
+        String v = "resources/dimacs/"+path+"/vertices.co";
+        String d = "resources/dimacs/"+path+"/distance.gr";
+        String t = "resources/dimacs/"+path+"/time.gr";
+        return parseDimacsFromIn(new In(v), new In(d), new In(t), reversedEdges);
+    }
+
     public DataModel parseDimacsFromIn(In vertices, In edges, In travelTime, boolean reversedEdges) {
         vertices.readLine();
         vertices.readLine();
@@ -606,5 +613,11 @@ public class GraphParser {
         public void setMin_y(double min_y) {
             this.min_y = min_y;
         }
+    }
+
+    public static void main(String[] args) {
+        var G = new GraphParser();
+        G.parseFromJson("resources/geojson/fyn.geojson");
+        System.out.println("");
     }
 }

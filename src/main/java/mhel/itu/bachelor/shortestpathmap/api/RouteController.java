@@ -32,12 +32,9 @@ public class RouteController {
         return getGraph();
     }
 
-    @GetMapping("/load/dimacs/nyc")
-    public GraphDTO loadDimacsNyc() {
-        String v = "resources/dimacs/nyc/vertices.co";
-        String d = "resources/dimacs/nyc/distance.gr";
-        String t = "resources/dimacs/nyc/time.gr";
-        model = P.parseDimacsFromIn(new In(v), new In(d), new In(t), false);
+    @GetMapping("/load/dimacs")
+    public GraphDTO loadDimacs(@RequestParam(value = "path") String path) {
+        model = P.parseFromDimacsPath(path, false);
         D = new DistanceOracle(model);
         return getGraph();
     }
