@@ -1,8 +1,5 @@
 package mhel.itu.bachelor.shortestpathmap.processing;
-
-import edu.princeton.cs.algs4.In;
 import mhel.itu.bachelor.shortestpathmap.algorithm.*;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -12,7 +9,7 @@ public class LandmarksProcessor {
 
     public static void processDistToLandmark(IDataModel M, SimpleGraph G, DistanceOracle D, IShortestPathAlgorithm sp, int landmark, String fileName) {
         var Q = new RouteQuery();
-        Q.setSource(landmark); //reversed because the graph is expected to be reversed.
+        Q.setSource(landmark); //reversed because the edges in the graph are expected to be reversed by the parser.
 
         Q.addCriterion(
                 RouteCriteriaEvaluationType.DISTANCE,
@@ -39,7 +36,6 @@ public class LandmarksProcessor {
             var i = 0;
             long lineStart = System.nanoTime();
             for(var v : M.getVertices()) {
-                //Consider skipping line entirely if there is no distance.
                 if(!sp.hasPath(v.I())) continue;
                 var dist = sp.distTo(v.I());
                 bw.write(v.I() + " " + dist);
@@ -98,7 +94,6 @@ public class LandmarksProcessor {
 
         var dOracle = new DistanceOracle(M);
 
-
         var D   = new Dijkstra();
         var i = 0;
         for(var l : M.getLandmarks()) {
@@ -119,12 +114,11 @@ public class LandmarksProcessor {
         for(var l : list) {
             processDistToLandmark(M, G, dOracle, D, l, dir);
         }
-
     }
 
-    public static void processRandomLandmarksFromDimacs(int count, String dir, In v, In d, In t) {
+    public static void processRandomLandmarksFromDimacs(int count, String dir) {
         var P   = new GraphParser();
-        var M   = P.parseDimacsFromIn(v,d,t, true);
+        var M   = P.parseFromDimacsPath(dir, true);
         var G   = M.generateGraph();
         var D   = new Dijkstra();
         M.generateRandomLandmarks(count);
@@ -139,9 +133,9 @@ public class LandmarksProcessor {
         }
     }
 
-    public static void processLandmarksFromDimacs(int[] list, String dir, In v, In d, In t) {
+    public static void processLandmarksFromDimacs(int[] list, String dir) {
         var P   = new GraphParser();
-        var M   = P.parseDimacsFromIn(v,d,t, true);
+        var M   = P.parseFromDimacsPath(dir, true);
         var G   = M.generateGraph();
         var D   = new Dijkstra();
 
@@ -156,20 +150,13 @@ public class LandmarksProcessor {
     }
 
     public static void main(String[] args) {
-       /* processRandomLandmarksFromDimacs(
-                16,
-                "resources/dimacs/nyc/",
-                new In("resources/dimacs/nyc/vertices.co"),
-                new In("resources/dimacs/nyc/distance.gr"),
-                new In("resources/dimacs/nyc/time.gr")
+        processRandomLandmarksFromDimacs(32, "fla");
+
+        /*processLandmarksFromDimacs(
+               new int[] {1041107, 1383, 246729, 755529, 634661, 179673, 925834, 165624, 977155, 289620, 1613, 1058300, 889217, 49092, 579684, 269613},
+                "fla"
         );*/
-       processLandmarksFromDimacs(
-               new int[] {4245, 191107, 76753, 84691, 161107, 178605, 139057, 4145, 4059, 193458, 102189, 95880, 116975, 74928, 80315, 257508},
-                "resources/dimacs/nyc/",
-                new In("resources/dimacs/nyc/vertices.co"),
-                new In("resources/dimacs/nyc/distance.gr"),
-                new In("resources/dimacs/nyc/time.gr")
-        );
+
         //processRandomLandmarksFromJson(16, "resources/json/hil/", "hil.json");
         //processLandmarksFromJson(new int[] {22667, 28460, 8231, 20792, 9840, 26338, 8422, 3703, 1962, 22583, 27380, 18166, 15417, 1757, 14, 22970}, "resources/json/hil/", "hil.json");
     }

@@ -8,7 +8,7 @@ export const graphs = [
     {
         id: 0,
         file: 'Hillerød',
-        type: 'GeoJSON - OSM',
+        type: 'GeoJSON',
         url: '/load/json/hil',
         vertices: 29711,
         edges: 80454,
@@ -32,12 +32,11 @@ export const graphs = [
         edges: '2,712,798',
         bytes: (14 + 14 + 8.6)
     },
-    /*
     {
         id: 3,
         file: 'California & Nevada',
         type: 'DIMACS',
-        url: '/dimacs/nyc',
+        url: '/load/dimacs?path=cal',
         vertices: '1,890,815',
         edges: '4,657,742',
         bytes: (26 + 26 + 16)
@@ -46,7 +45,7 @@ export const graphs = [
         id: 4,
         file: 'Eastern USA',
         type: 'DIMACS',
-        url: '/dimacs/nyc',
+        url: '/load/dimacs?path=e',
         vertices: '3,598,623',
         edges: '8,778,114',
         bytes: (49 + 50 + 32)
@@ -55,12 +54,22 @@ export const graphs = [
         id: 5,
         file: 'Western USA',
         type: 'DIMACS',
-        url: '/dimacs/nyc',
+        url: '/load/dimacs?path=w',
         vertices: '6,262,104',
         edges: '15,248,146',
         bytes: (86 + 88 + 57)
     },
     {
+        id: 6,
+        file: 'Central USA',
+        type: 'DIMACS',
+        url: '/load/dimacs?path=ctr',
+        vertices: '14,081,816',
+        edges: '34,292,496',
+        bytes: "1.870.000"
+    }
+    /* This seemed like a good idea, but dont even think about it before the loading is improved.
+    ,{
         id: 6,
         file: 'Full USA',
         type: 'DIMACS',
@@ -68,7 +77,8 @@ export const graphs = [
         vertices: '23,947,347',
         edges: '58,333,344',
         bytes: (335 + 342 + 218)
-    }*/
+    }
+    */
 ];
 
 export function algorithmTitle(id) {

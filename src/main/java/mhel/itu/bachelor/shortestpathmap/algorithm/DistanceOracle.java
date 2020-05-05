@@ -47,23 +47,8 @@ public class DistanceOracle {
 
 
     public double landmarkDist(int n, int t) {
-        var landmarks =  dataModel.getLandmarksTable();
         double max = 0;
-
         if(n == t) return max;
-        /*
-        if(landmarks.containsKey(n)) {
-            max = landmarks.get(n).get(n);
-            if(max < 0) throw new IllegalArgumentException("Landmark distance cannot be negative!");
-            if(isNaN(max)) throw new IllegalArgumentException("Landmark distance is not a number!");
-        }
-
-        if(landmarks.containsKey(t)) {
-            max = landmarks.get(t).get(t);
-            if(max < 0) throw new IllegalArgumentException("Landmark distance cannot be negative!");
-            if(isNaN(max)) throw new IllegalArgumentException("Landmark distance is not a number!");
-        }
-        */
         for(var l : dataModel.getLandmarksTable().entrySet()) {
             var distTable = l.getValue(); //Distance table for all vertices to landmark l
 

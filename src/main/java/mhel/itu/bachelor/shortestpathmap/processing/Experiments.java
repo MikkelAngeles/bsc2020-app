@@ -164,9 +164,13 @@ public class Experiments {
         //dijkstraSPExtendedAstarSPExperiment(10000, "resources/algs4/", "1000EWD.txt", false);
 
 
-        spDimacsExperiment("dijkstra", new Dijkstra(), "fla", 1000, true);
-        spDimacsExperiment("astar-1", new Astar(1), "fla", 1000, true);
+        //spDimacsExperiment("dijkstra", new Dijkstra(), "fla", 1000, true);
+        //spDimacsExperiment("astar-1", new Astar(1), "fla", 1000, true);
+        //spDimacsExperiment("astar-10", new Astar(10), "fla", 1000, true);
+        //spDimacsExperiment("astar-100", new Astar(100), "fla", 1000, true);
 
+        spDimacsExperiment("astar-landmarks-1", new AstarLandmarks(1), "nyc", 10000, true);
+        //spDimacsExperiment("astar", new Astar(1), "fla", 10000, true);
         /*
         spDimacsExperiment("astar-10", new Astar(10), "nyc", 1000, true);
         spDimacsExperiment("astar-100", new Astar(100), "nyc", 1000, true);
