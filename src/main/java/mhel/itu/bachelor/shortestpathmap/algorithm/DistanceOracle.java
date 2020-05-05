@@ -45,6 +45,7 @@ public class DistanceOracle {
         return (d / distUpper) / 2;
     }
 
+
     public double landmarkDist(int n, int t) {
         var landmarks =  dataModel.getLandmarksTable();
         double max = 0;
@@ -64,17 +65,17 @@ public class DistanceOracle {
         }
         */
         for(var l : dataModel.getLandmarksTable().entrySet()) {
-            var distTable = l.getValue();
+            var distTable = l.getValue(); //Distance table for all vertices to landmark l
 
-            var val1 = distTable.get(n);
-            var val2 = distTable.get(t);
-            if(val1 == null || val2 == null) continue;
+            var nDistToLandmark = distTable.get(n); //True precomputed distance from vertex n to landmark l
+            var tDistToLandmark = distTable.get(t); //True precomputed distance from vertex t to landmark l
 
-            if(isNaN(val1) || isNaN(val2)) continue;
-            if(val1 == Double.POSITIVE_INFINITY || val2 == Double.POSITIVE_INFINITY) continue;
+            //Skip landmark if n or t has no path to l
+            if(nDistToLandmark == null || tDistToLandmark == null) continue;
 
-            double dist = Math.abs(val1 - val2);
-            if(isNaN(dist)) continue;
+            //Absolute delta value between distances
+            double dist = Math.abs(nDistToLandmark - tDistToLandmark);
+
             max = Math.max(max, dist);
         }
 
@@ -101,22 +102,20 @@ public class DistanceOracle {
     public double haversine(int v, int w) {
         var n = dataModel.getVertex(v);
         var t = dataModel.getVertex(w);
-        var tmp =  haversine(n.X(), n.Y(), t.X(), t.Y());
+        var tmp = haversine(n.X(), n.Y(), t.X(), t.Y());
         return getDistFactor(tmp);
     }
 
-    //https://github.com/jasonwinn/haversine/blob/master/Haversine.java
-    public double haversine(double lat_from,  double lon_from, double lat_to, double lon_to) {
-        var EARTH_RADIUS = 6371f; // Approx Earth radius in KM
-        var dLat  = Math.toRadians(lat_to - lat_from);
-        var dLong =  Math.toRadians(lon_to - lon_from);
+    public static double haversine(double lat1, double lon1, double lat2, double lon2) {
+        double R = 6372.8;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        lat1 = Math.toRadians(lat1);
+        lat2 = Math.toRadians(lat2);
 
-        lat_from = Math.toRadians(lat_from);
-        lat_to   =  Math.toRadians(lat_to);
-
-        var a =  Math.pow(Math.sin(dLat / 2), 2) + Math.cos(lat_from) * Math.cos(lat_to) * Math.pow(Math.sin(dLong / 2), 2);
-        var c =  (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-        return EARTH_RADIUS * c;
+        double a = Math.pow(Math.sin(dLat / 2),2) + Math.pow(Math.sin(dLon / 2),2) * Math.cos(lat1) * Math.cos(lat2);
+        double c = 2 * Math.asin(Math.sqrt(a));
+        return R * c;
     }
 
     //Todo

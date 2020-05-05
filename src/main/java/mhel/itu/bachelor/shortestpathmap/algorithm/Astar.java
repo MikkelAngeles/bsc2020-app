@@ -67,8 +67,8 @@ public class Astar implements IShortestPathAlgorithm {
         }
     }
 
-    public double h(int v) {
-        var w = distanceOracle.haversine(v, query.target);
+    public double h(int n) {
+        var w = distanceOracle.haversine(n, query.target);
         return w * heuristicWeight;
     }
 

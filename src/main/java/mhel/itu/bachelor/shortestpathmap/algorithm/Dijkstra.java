@@ -9,9 +9,6 @@ public class Dijkstra implements IShortestPathAlgorithm {
     private double[] distTo;
     private IndexMinPQ<Double> pq;           // priority queue of vertices
     private Queue<Integer> visited;
-    private IDataModel dataModel;
-    private RouteQuery query;
-    private DistanceOracle distanceOracle;
 
     public Dijkstra() { }
 
@@ -25,9 +22,6 @@ public class Dijkstra implements IShortestPathAlgorithm {
         visited = new LinkedList<>();
         distTo = new double[G.getV()];          //Assign array size from number of vertices in graph
         edgeTo = new SimpleEdge[G.getV()];     //Assign array size from number of vertices in graph
-        this.dataModel = dm;
-        this.query = query;
-        this.distanceOracle = d;
 
         //Add POSITIVE_INFINITY value to every vertex
         for (int v = 0; v < G.getV(); v++)
