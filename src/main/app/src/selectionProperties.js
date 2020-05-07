@@ -9,7 +9,7 @@ export const graphs = [
         id: 0,
         file: 'Hillerød',
         type: 'GeoJSON',
-        url: '/load/json/hil',
+        url: '/load/geojson/hil',
         vertices: 29711,
         edges: 80454,
         bytes: 3.7
@@ -66,7 +66,7 @@ export const graphs = [
         url: '/load/dimacs?path=ctr',
         vertices: '14,081,816',
         edges: '34,292,496',
-        bytes: "1.870.000"
+        bytes: "1870"
     }
     /* This seemed like a good idea, but dont even think about it before the loading is improved.
     ,{

@@ -1,5 +1,7 @@
 package mhel.itu.bachelor.shortestpathmap.algorithm;
 
+import mhel.itu.bachelor.shortestpathmap.model.*;
+
 import java.util.List;
 
 import static java.lang.Double.isNaN;
@@ -15,12 +17,50 @@ public class DistanceOracle {
         this.dataModel = dataModel;
 
         var dMax = Double.NEGATIVE_INFINITY;
-        for(var d : dataModel.getDistances()) if(d > dMax) dMax = d;
+        for(var d : dataModel.getDistanceTable()) if(d > dMax) dMax = d;
         distUpper = dMax;
 
         var tMax = Double.NEGATIVE_INFINITY;
-        for(var t : dataModel.getTravelTimes()) if(t > tMax) tMax = t;
+        for(var t : dataModel.getTimeTable()) if(t > tMax) tMax = t;
         timeUpper = tMax;
+    }
+
+    public double cost(int edge, RouteQuery q) {
+        if(q.getCriteria() == null || q.getCriteria().isEmpty()) return dist(edge); //Default is normal distance.
+
+        var eDist = dist(edge);
+        var eTime = time(edge);
+
+        var applyTimeFactor = false;
+        var applyDistFactor = false;
+        var distAccum = 0;
+        var timeAccum = 0;
+
+        for(var c : q.getCriteria()) {
+            var curr_key = c.getProperty().getKey();
+            var curr_value = c.getProperty().getValue();
+
+            if(!dataModel.hasEdgeProperty(edge, c.getProperty())) continue;
+            var prop = dataModel.getEdgeProperty(edge, curr_key);
+
+            if(!prop.getValue().equals(curr_value)) continue;
+            var factor = c.getWeightFactor();
+            if(c.getWeightType().equals(EdgeWeightType.DISTANCE)) {
+                distAccum += factor;
+                applyDistFactor = true;
+            }
+            else if(c.getWeightType().equals(EdgeWeightType.TIME)) {
+                timeAccum += factor;
+                applyTimeFactor = true;
+            }
+        }
+
+        var distScaled = applyDistFactor ? (eDist * distAccum) : eDist;
+        var timeScaled = applyTimeFactor ? (eTime * timeAccum) : eTime;
+
+        var sum = applyTimeFactor ? (timeScaled + distScaled) : distScaled;
+        if(sum < 0) throw new IllegalArgumentException("Cost can't be negative!");
+        return sum;
     }
 
     public double time(int edge) {
@@ -49,7 +89,7 @@ public class DistanceOracle {
     public double landmarkDist(int n, int t) {
         double max = 0;
         if(n == t) return max;
-        for(var l : dataModel.getLandmarksTable().entrySet()) {
+        for(var l : dataModel.getLandmarksDistanceTable().entrySet()) {
             var distTable = l.getValue(); //Distance table for all vertices to landmark l
 
             var nDistToLandmark = distTable.get(n); //True precomputed distance from vertex n to landmark l

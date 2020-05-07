@@ -1,4 +1,4 @@
-package mhel.itu.bachelor.shortestpathmap.algorithm;
+package mhel.itu.bachelor.shortestpathmap.model;
 
 import java.awt.*;
 import java.awt.geom.PathIterator;

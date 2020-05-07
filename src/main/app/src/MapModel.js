@@ -27,6 +27,7 @@ export function useMapModel (props) {
     const [route, setRoute]                             = useState(routeTemplate);
     const [isLoading, setIsLoading]                     = useState(false);
     const [edges, setEdges]                             = useState([]);
+    const [properties, setProperties]                   = useState({});
     const [results, setResults]                         = useState([]);
 
     const boundsHull = [
@@ -89,6 +90,24 @@ export function useMapModel (props) {
                     let data = response.data;
                     setGraph(data);
                     alertModel.success("Successfully loaded " + graphTitle(selectedGraph) + "!");
+                    loadProperties();
+                }
+                console.log(response);
+            })
+            .catch((e) => alertModel.error(e.toString()))
+            .finally(() => setIsLoading(false))
+    }
+
+    function loadProperties() {
+        setIsLoading(true);
+        alertModel.info("Loading properties..");
+
+        axios.get(baseUrl + "/model/properties")
+            .then((response) => {
+                if(response.status === 200 && response.data) {
+                    let data = response.data;
+                    setProperties(data);
+                    alertModel.success("Successfully loaded properties");
                 }
                 console.log(response);
             })
@@ -106,15 +125,18 @@ export function useMapModel (props) {
         setIsLoading(true);
 
         let alg = algorithmUrl(selectedAlgorithm);
+        if(selectionModel.criteria.length > 0) alg += "/criteria";
         let path = `${alg}?from=${q.source}&to=${q.target}`;
         if(selectedAlgorithm === 1 || selectedAlgorithm === 2) path += `&heuristic=${q.heuristicsWeight}`;
+        if(selectionModel.criteria.length > 0) path += "&criteria="+encodeURI(JSON.stringify(selectionModel.criteria));
 
         let resultTemplate = {
             from: q.source,
             to: q.target,
             graph: graphTitle(selectedGraph),
             algorithm: algorithmTitle(selectedAlgorithm),
-            data: routeTemplate
+            data: routeTemplate,
+            criteria: [selectionModel.criteria]
         };
 
         axios.get(`${baseUrl}/${path}`)
@@ -166,6 +188,7 @@ export function useMapModel (props) {
         edges,
         getNearestEdgePoints,
         getNearestEdges,
-        results
+        results,
+        properties
     }
 }

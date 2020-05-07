@@ -2,11 +2,10 @@ package mhel.itu.bachelor.shortestpathmap.algorithm;
 
 import edu.princeton.cs.algs4.IndexMinPQ;
 import edu.princeton.cs.algs4.Stack;
+import mhel.itu.bachelor.shortestpathmap.model.*;
 
 import java.util.LinkedList;
 import java.util.Queue;
-
-import static java.lang.Double.isNaN;
 
 
 public class AstarLandmarks implements IShortestPathAlgorithm {
@@ -14,44 +13,43 @@ public class AstarLandmarks implements IShortestPathAlgorithm {
     private double[] gScore;
     private double[] fScore;
     private IndexMinPQ<Double> pq;
-    private Queue<Integer> visited;
-    private IDataModel dataModel;
-    private RouteQuery query;
+    private RouteQuery Q;
+    private DistanceOracle O;
     private double heuristicWeight;
-    private DistanceOracle distanceOracle;
+    private Queue<Integer> visited;
+
     public AstarLandmarks(double h) { this.heuristicWeight = h;}
 
     @Override
-    public void perform(SimpleGraph G, IDataModel dm, DistanceOracle d, RouteQuery query) {
+    public void load(IGraph G, DistanceOracle O, RouteQuery Q) {
         for (var e : G.edges()) {
             if(e == null) continue;
-            if (dm.getDist(e.index()) < 0)
-                throw new IllegalArgumentException("edge " + e + " has negative weight");
+            if (O.dist(e.index()) < 0) throw new IllegalArgumentException("edge " + e + " has negative weight");
         }
-        this.dataModel = dm;
-        this.query = query;
-        this.distanceOracle = d;
+
+        this.Q      = Q;
+        this.O      = O;
         visited = new LinkedList<>();
-        edgeTo = new SimpleEdge[G.getV()];     //Assign array size from number of vertices in graph
+        edgeTo = new SimpleEdge[G.V()];     //Assign array size from number of vertices in graph
 
-        gScore = new double[G.getV()]; //Assign array size from number of vertices in graph
-        fScore = new double[G.getV()];
+        gScore = new double[G.V()]; //Assign array size from number of vertices in graph
+        fScore = new double[G.V()];
 
-        for (int v = 0; v < G.getV(); v++) {
+        for (int v = 0; v < G.V(); v++) {
             gScore[v] = Float.POSITIVE_INFINITY;
             fScore[v] = Float.POSITIVE_INFINITY;
         }
 
         //Set the start vertex distance s to 0.0
-        gScore[query.source] = 0.0f;
-        fScore[query.source] = h(query.source);
+        gScore[Q.getSource()] = 0.0f;
+        fScore[Q.getSource()] = h(Q.getSource());
 
-        pq = new IndexMinPQ<>(G.getV());
-        pq.insert(query.source, fScore[query.source]);
+        pq = new IndexMinPQ<>(G.V());
+        pq.insert(Q.getSource(), fScore[Q.getSource()]);
 
         while (!pq.isEmpty()) {
             var current = pq.delMin();
-            if(current == query.target) break;
+            if(current == Q.getTarget()) break;
             for (var e : G.adj(current)) relax(e);
         }
     }
@@ -59,7 +57,7 @@ public class AstarLandmarks implements IShortestPathAlgorithm {
     private void relax(IEdge e) {
         int v = e.from().I(), w = e.to().I();
         visited.add(w);
-        double tentative_gScore = gScore[v] + distanceOracle.dist(e.index());
+        double tentative_gScore = gScore[v] + O.dist(e.index());
         if(tentative_gScore < gScore[w]) {
             edgeTo[w] = e;
             gScore[w] = tentative_gScore;
@@ -70,7 +68,7 @@ public class AstarLandmarks implements IShortestPathAlgorithm {
     }
 
     public double h(int n) {
-        var rs =  distanceOracle.landmarkDist(n, query.target) * heuristicWeight;
+        var rs =  O.landmarkDist(n, Q.getTarget()) * heuristicWeight;
         if(rs < 0) throw new IllegalArgumentException("Heuristic value cannot be negative");
         return rs;
     }

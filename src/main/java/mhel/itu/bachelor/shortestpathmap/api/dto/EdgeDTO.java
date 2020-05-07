@@ -1,4 +1,4 @@
-package mhel.itu.bachelor.shortestpathmap.api;
+package mhel.itu.bachelor.shortestpathmap.api.dto;
 
 public class EdgeDTO {
     public int index;

@@ -1,6 +1,8 @@
-package mhel.itu.bachelor.shortestpathmap.algorithm;
+package mhel.itu.bachelor.shortestpathmap.model;
 
-public class SimpleEdge implements IEdge {
+import java.io.Serializable;
+
+public class SimpleEdge implements IEdge, Serializable {
     private int index;
     private IVertex from;
     private IVertex to;

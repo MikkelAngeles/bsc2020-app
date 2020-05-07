@@ -1,12 +1,15 @@
-package mhel.itu.bachelor.shortestpathmap.algorithm;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+package mhel.itu.bachelor.shortestpathmap.tool;
+import com.google.gson.*;
 
+import com.google.gson.stream.JsonReader;
 import edu.princeton.cs.algs4.In;
+import mhel.itu.bachelor.shortestpathmap.algorithm.DistanceOracle;
+import mhel.itu.bachelor.shortestpathmap.model.*;
+import mhel.itu.bachelor.shortestpathmap.model.EdgeProperty;
 
 import java.awt.geom.Point2D;
 import java.io.*;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,7 +18,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class GraphParser {
-    //String path = "C:\\Users\\mh89\\Documents Offline\\ITU\\bsc2020\\resources\\json\\route_line.geojson";
     public ParsedGraph pg;
     public DistanceOracle distanceOracle;
 
@@ -26,10 +28,17 @@ public class GraphParser {
     }
 
     public DataModel parseFromDimacsPath(String path, boolean reversedEdges) {
-        String v = "resources/dimacs/"+path+"/vertices.co";
-        String d = "resources/dimacs/"+path+"/distance.gr";
-        String t = "resources/dimacs/"+path+"/time.gr";
-        return parseDimacsFromIn(new In(v), new In(d), new In(t), reversedEdges);
+        var v = "resources/dimacs/"+path+"/vertices.co";
+        var d = "resources/dimacs/"+path+"/distance.gr";
+        var t = "resources/dimacs/"+path+"/time.gr";
+        var dm = parseDimacsFromIn(new In(v), new In(d), new In(t), reversedEdges);
+
+        var landmarksDist = loadLandmarks("resources/dimacs/"+path+"/landmarks/dist");
+        dm.setLandmarksDistanceTable(landmarksDist);
+
+        var landmarksTime = loadLandmarks("resources/dimacs/"+path+"/landmarks/time");
+        dm.setLandmarksDistanceTable(landmarksTime);
+        return dm;
     }
 
     public DataModel parseDimacsFromIn(In vertices, In edges, In travelTime, boolean reversedEdges) {
@@ -56,7 +65,6 @@ public class GraphParser {
         vertices.readLine();
         edges.readLine();
         edges.readLine();
-
 
         var tmpVertices = new HashMap<Integer, Point2D>();
         var vertexCollisions = new HashMap<Point2D, Integer>();
@@ -90,8 +98,6 @@ public class GraphParser {
             tmpVertices.put(index, pt);
         }
 
-
-
         var tmpEdges = new ArrayList<DimacsEdge>();
         var edgeCollisions = new HashMap<Integer, HashSet<Integer>>();
         for (int i = 0; i < E; i++) {
@@ -123,9 +129,6 @@ public class GraphParser {
             dm.addDist(e, t.dist);
         }
 
-        var landmarks = loadLandmarks("resources/dimacs/nyc/landmarks/dist");
-        dm.addLandmarks(landmarks);
-
         return dm;
     }
 
@@ -156,7 +159,7 @@ public class GraphParser {
     }
 
 
-    public DataModel parseFromMyJsonReverseEdges(String path) {
+    public DataModel parseJsonModelReversedEdges(String path) {
         JsonObject jsonObject = null;
 
         try (var r = new FileReader(path)) {
@@ -187,20 +190,14 @@ public class GraphParser {
             var newEdge = dm.addEdge(w, v); //Reversed edges.
             dm.addDist(newEdge, d);
         }
-
-        //var landmarks = loadLandmarks();
-        //dm.addLandmarks(landmarks);
         return dm;
     }
 
-    public DataModel parseFromMyJson(String path) {
+    public DataModel parseJsonModel(String path) {
         JsonObject jsonObject = null;
 
-        try (var r = new FileReader(path)) {
-            jsonObject = new Gson().fromJson(r, JsonObject.class);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        try (var r = new FileReader("resources/json/"+path+"/"+path+".json")) { jsonObject = new Gson().fromJson(r, JsonObject.class); }
+        catch (IOException e) { e.printStackTrace(); }
 
         var V               = jsonObject.getAsJsonPrimitive("V").getAsInt();
         var E               = jsonObject.getAsJsonPrimitive("E").getAsInt();
@@ -225,19 +222,19 @@ public class GraphParser {
             dm.addDist(newEdge, d);
         }
 
-        var landmarks = loadLandmarks("resources/json/hil/landmarks/dist");
-        dm.addLandmarks(landmarks);
+        var landmarksDist = loadLandmarks("resources/json/"+path+"/landmarks/dist");
+        dm.setLandmarksDistanceTable(landmarksDist);
+
+        var landmarksTime = loadLandmarks("resources/json/"+path+"/landmarks/time");
+        dm.setLandmarksDistanceTable(landmarksTime);
         return dm;
     }
 
-    public DataModel parseFromJson(String path) {
+    public DataModel parseGeoJsonToModel(String path) {
         JsonObject jsonObject = null;
 
-        try (var r = new FileReader(path)) {
-            jsonObject = new Gson().fromJson(r, JsonObject.class);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        try (var r = new FileReader(path)) { jsonObject = new Gson().fromJson(r, JsonObject.class); }
+        catch (IOException e) { e.printStackTrace(); }
 
         if(jsonObject == null) return null;
         var duplicates = new HashMap<Point2D, HashSet<Point2D>>();
@@ -254,15 +251,17 @@ public class GraphParser {
             var geometry    = arr.get(i).getAsJsonObject().get("geometry");
             var coordinates = geometry.getAsJsonObject().getAsJsonArray("coordinates");
             var props       = arr.get(i).getAsJsonObject().get("properties");
-            var propSet     = new HashMap<EdgePropKey, EdgePropValue>();
+            var propSet     = new HashSet<EdgeProperty>();
 
-            var p = props.getAsJsonObject().get("ref");
-            var ref = !p.isJsonNull() ? p.toString() : "";
-
-            addProperty(propSet, props, "oneway");
-            addProperty(propSet, props, "highway");
-            addProperty(propSet, props, "route");
-            addProperty(propSet, props, "foot");
+            var p = props.getAsJsonObject();
+            if (!p.isJsonNull()) {
+                for(var entry : p.entrySet()) {
+                    var key = entry.getKey();
+                    var val = entry.getValue();
+                    if(val.isJsonNull()) continue;
+                    propSet.add(new EdgeProperty(key, val.getAsString()));
+                }
+            }
 
             Point2D from = null;
             for (var c : coordinates) {
@@ -297,12 +296,9 @@ public class GraphParser {
                     continue;
                 }
                 else {
-                    var dist = distanceOracle.haversine(from.getX(), from.getY(), to.getX(), to.getY());
-                    var edgeTo = new ParsedEdge(from, to, dist, ref, i);
-
-                    for(var ps : propSet.entrySet()) {
-                        edgeTo.addProperty(ps.getKey(), ps.getValue());
-                    }
+                    var dist    = distanceOracle.haversine(from.getX(), from.getY(), to.getX(), to.getY());
+                    var time    = distanceOracle.haversine(from.getX(), from.getY(), to.getX(), to.getY());
+                    var edgeTo  = new ParsedEdge(from, to, dist, time, propSet);
                     pg.edges.add(edgeTo);
 
                     //Prevent duplicates.
@@ -311,12 +307,10 @@ public class GraphParser {
                     set.add(to);
                     duplicates.put(from, set);
 
-                    var oneWay = propSet.containsKey(EdgePropKey.ONE_WAY) && propSet.get(EdgePropKey.ONE_WAY) == EdgePropValue.TRUE;
+                    var oneWay = propSet.contains(new EdgeProperty("oneway", ""));
+
                     if(!oneWay) {
-                        var edgeFrom = new ParsedEdge(to, from, dist, ref, i);
-                        for(var ps : propSet.entrySet()) {
-                            edgeFrom.addProperty(ps.getKey(), ps.getValue());
-                        }
+                        var edgeFrom = new ParsedEdge(to, from, dist, time, propSet);
                         pg.edges.add(edgeFrom);
 
                         //Prevent duplicates.
@@ -326,7 +320,6 @@ public class GraphParser {
                         duplicates.put(to, set);
                     }
                 }
-
                 from = to;
             }
         }
@@ -339,13 +332,9 @@ public class GraphParser {
 
         var i = 0;
         for (var vertex : pg.getMap()) {
-            //var index = indexLookup.get(vertex);
             var index = i++;
             dm.addVertex(index, vertex.getX(),  vertex.getY());
             indexLookup.put(vertex, index);
-
-            //var line = indexLineLookup.get(vertex);
-            //dm.addVertexToLine(line, index);
         }
 
         for (var edge : pg.getEdges()) {
@@ -353,74 +342,14 @@ public class GraphParser {
             var to = indexLookup.get(edge.to);
 
             var newEdge = dm.addEdge(from, to);
-            dm.addDist(newEdge, edge.weight);
+            dm.addDist(newEdge, edge.distance);
             dm.addTravelTime(newEdge, 1);
-            dm.addProperty(newEdge, edge.getProps());
-            if(edge.getRef() != null) dm.addEdgeRef(edge.getRef(), newEdge); //Used to map edge relations
-            //Used to map edges to the related line from the parsed data.
+            for(var prop : edge.getProps()) {
+                dm.addEdgeProperty(newEdge, prop);
+            }
         }
 
         return  dm;
-    }
-
-
-
-    public EdgePropKey keyToEdgePropertyType(String key) {
-        switch (key) {
-            case "ref":
-                return EdgePropKey.REF;
-            case "highway":
-                return EdgePropKey.ROAD_TYPE;
-            case "car":
-                return EdgePropKey.CAR;
-            case "bike":
-                return EdgePropKey.BIKE;
-            case "foot":
-                return EdgePropKey.FOOT;
-            case "oneway":
-                return EdgePropKey.ONE_WAY;
-            case "maxspeed":
-                return EdgePropKey.MAX_SPEED;
-            case "lanes":
-                return EdgePropKey.LANES;
-            case "route":
-                return EdgePropKey.ROUTE;
-            case "surface":
-                return EdgePropKey.SURFACE;
-            default:
-                return EdgePropKey.UNKNOWN;
-        }
-    }
-
-    public EdgePropValue getEdgeProperty(EdgePropKey type, String key) {
-        switch (type) {
-            case ROAD_TYPE:
-                return EdgePropValue.ROAD;
-            case ONE_WAY:
-                return key.equals("yes") ? EdgePropValue.TRUE : EdgePropValue.FALSE;
-            default:
-                return EdgePropValue.UNKNOWN;
-        }
-    }
-
-    public void addProperty(HashMap<EdgePropKey, EdgePropValue> set, JsonElement props, String key) {
-        try {
-            var p = props.getAsJsonObject().get(key);
-            if (!p.isJsonNull()) {
-                var rs = keyToEdgePropertyType(key);
-                if(rs == null) return;
-
-                var rs2 = getEdgeProperty(rs, p.toString());
-                if(rs2 == null) return;
-                set.put(rs, rs2);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static double toRadians(double coordinateXorY) {
-        return coordinateXorY * Math.PI / 180;
     }
 
     public class DimacsEdge {
@@ -438,111 +367,59 @@ public class GraphParser {
     public class ParsedEdge {
         public Point2D from;
         public Point2D to;
-        public double weight;
-        public Map<EdgePropKey, EdgePropValue> props;
-        public String ref;
-        public int line;
+        public double distance;
+        public double time;
+        public Set<EdgeProperty> props;
 
-        public ParsedEdge(Point2D from, Point2D to, double weight, String ref, int line) {
+        public ParsedEdge(Point2D from, Point2D to, double distance, double time, Set<EdgeProperty> props) {
             this.from = from;
             this.to = to;
-            this.weight = weight;
-            this.props = new HashMap<>();
-            this.ref = ref;
-            this.line = line;
+            this.distance = distance;
+            this.time = time;
+            this.props = props;
         }
 
-        public double getWeight() {
-            return weight;
+        public Point2D getFrom() {
+            return from;
         }
 
-        public void setWeight(double weight) {
-            this.weight = weight;
+        public void setFrom(Point2D from) {
+            this.from = from;
         }
 
-        public Map<EdgePropKey, EdgePropValue> getProps() {
+        public Point2D getTo() {
+            return to;
+        }
+
+        public void setTo(Point2D to) {
+            this.to = to;
+        }
+
+        public double getDistance() {
+            return distance;
+        }
+
+        public void setDistance(double distance) {
+            this.distance = distance;
+        }
+
+        public double getTime() {
+            return time;
+        }
+
+        public void setTime(double time) {
+            this.time = time;
+        }
+
+        public Set<EdgeProperty> getProps() {
             return props;
         }
 
-        public void addProperty(EdgePropKey ept, EdgePropValue ep) {
-            props.put(ept, ep);
-        }
-
-        public String getRef() {
-            return ref;
+        public void setProps(Set<EdgeProperty> props) {
+            this.props = props;
         }
     }
 
-    /*public class ParsedGraph {
-        double maxLat = double.NEGATIVE_INFINITY;
-        double minLat = double.POSITIVE_INFINITY;
-        double maxLon = double.NEGATIVE_INFINITY;
-        double minLon = double.POSITIVE_INFINITY;
-        Set<Point2D> map = new HashSet<>();
-        Set<ParsedEdge> edges = new HashSet<>();
-        int V;
-        int E;
-
-        public Set<ParsedEdge> getEdges() {
-            return edges;
-        }
-
-        public Set<Point2D> getMap() {
-            return map;
-        }
-
-        public void setMap(Set<Point2D> map) {
-            this.map = map;
-        }
-
-        public int getV() {
-            return map.size();
-        }
-
-        public void setV(int v) {
-            V = v;
-        }
-
-        public int getE() {
-            return edges.size();
-        }
-
-        public void setE(int e) {
-            E = e;
-        }
-
-        public double getMaxLat() {
-            return maxLat;
-        }
-
-        public void setMaxLat(double maxLat) {
-            this.maxLat = maxLat;
-        }
-
-        public double getMinLat() {
-            return minLat;
-        }
-
-        public void setMinLat(double minLat) {
-            this.minLat = minLat;
-        }
-
-        public double getMaxLon() {
-            return maxLon;
-        }
-
-        public void setMaxLon(double maxLon) {
-            this.maxLon = maxLon;
-        }
-
-        public double getMinLon() {
-            return minLon;
-        }
-
-        public void setMinLon(double minLon) {
-            this.minLon = minLon;
-        }
-    }*/
     public class ParsedGraph {
         double max_x = Double.NEGATIVE_INFINITY;
         double min_x = Double.POSITIVE_INFINITY;
@@ -550,74 +427,50 @@ public class GraphParser {
         double min_y = Double.POSITIVE_INFINITY;
         Set<Point2D> map = new HashSet<>();
         Set<ParsedEdge> edges = new HashSet<>();
-
-        int V;
-        int E;
-
         public Set<ParsedEdge> getEdges() {
             return edges;
         }
-
         public Set<Point2D> getMap() {
             return map;
         }
-
         public void setMap(Set<Point2D> map) {
             this.map = map;
         }
+    }
 
-        public int getV() {
-            return map.size();
+    public static DataModel load(String fileName) {
+        FileOutputStream fileOutputStream = null;
+        try {
+            var fileInputStream = new FileInputStream("resources/models/yourfile.txt");
+            var objectInputStream = new ObjectInputStream(fileInputStream);
+            var p2 = (DataModel) objectInputStream.readObject();
+            objectInputStream.close();
+            return p2;
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
         }
+        return null;
+    }
 
-        public void setV(int v) {
-            V = v;
-        }
-
-        public int getE() {
-            return edges.size();
-        }
-
-        public void setE(int e) {
-            E = e;
-        }
-
-        public double getMax_x() {
-            return max_x;
-        }
-
-        public void setMax_x(double max_x) {
-            this.max_x = max_x;
-        }
-
-        public double getMin_x() {
-            return min_x;
-        }
-
-        public void setMin_x(double min_x) {
-            this.min_x = min_x;
-        }
-
-        public double getMax_y() {
-            return max_y;
-        }
-
-        public void setMax_y(double max_y) {
-            this.max_y = max_y;
-        }
-
-        public double getMin_y() {
-            return min_y;
-        }
-
-        public void setMin_y(double min_y) {
-            this.min_y = min_y;
+    public static void save(DataModel dm, String fileName) {
+        FileOutputStream fileOutputStream = null;
+        try {
+            fileOutputStream = new FileOutputStream("resources/models/"+fileName);
+            var objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            objectOutputStream.writeObject(dm);
+            objectOutputStream.flush();
+            objectOutputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
-        var G = new GraphParser();
-        G.parseFromJson("resources/geojson/fyn.geojson");
-        System.out.println("");
+        var p = new GraphParser();
+        var rs = p.parseGeoJsonToModel("resources/geojson/hil.geojson");
+        //save(rs);
+
+        //var loaded = load();
+        System.out.println("kekw");
     }
 }

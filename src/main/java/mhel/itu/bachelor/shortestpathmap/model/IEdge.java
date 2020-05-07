@@ -1,4 +1,4 @@
-package mhel.itu.bachelor.shortestpathmap.algorithm;
+package mhel.itu.bachelor.shortestpathmap.model;
 
 public interface IEdge {
     int index();

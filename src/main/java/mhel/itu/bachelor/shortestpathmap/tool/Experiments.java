@@ -1,10 +1,11 @@
-package mhel.itu.bachelor.shortestpathmap.processing;
+package mhel.itu.bachelor.shortestpathmap.tool;
 
 import edu.princeton.cs.algs4.DijkstraSP;
 import edu.princeton.cs.algs4.EdgeWeightedDigraph;
 import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.StdOut;
 import mhel.itu.bachelor.shortestpathmap.algorithm.*;
+import mhel.itu.bachelor.shortestpathmap.model.*;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -19,13 +20,13 @@ import static edu.princeton.cs.algs4.StdStats.min;
 
 public class Experiments {
 
-    public static void spExperiment(String title, IShortestPathAlgorithm sp, DataModel M, SimpleGraph G, ArrayList<RouteQuery> Q, DistanceOracle D, int n, boolean printProgress) {
+    public static void spExperiment(String title, IShortestPathAlgorithm sp, IGraph G, ArrayList<RouteQuery> Q, DistanceOracle D, int n, boolean printProgress) {
         var distArr = new double[n];
         var elapsedArr = new double[n];
         var i = 0;
         for(var q : Q) {
             var start = System.currentTimeMillis();
-            sp.perform(G, M, D, q);
+            sp.load(G, D, q);
             distArr[i] = sp.hasPath(q.getTarget()) ? sp.distTo(q.getTarget()) : 0;
             var end = System.currentTimeMillis();
             elapsedArr[i] = (end - start);
@@ -33,8 +34,8 @@ public class Experiments {
             i++;
         }
         prettyPintVerboseTable(distArr, elapsedArr);
-        printFullLaTeXTable("", n, G.getV(), G.getE() ,distArr, elapsedArr);
-        printToLogFile(title, G.getV(), G.getE(), distArr, elapsedArr);
+        printFullLaTeXTable("", n, G.V(), G.E() ,distArr, elapsedArr);
+        printToLogFile(title, G.V(), G.E(), distArr, elapsedArr);
     }
 
     //Experiment used in section about Dijkstra's with 1000EWD.txt, 10000EWD.txt and largeEWD.txt
@@ -117,10 +118,23 @@ public class Experiments {
         var D   = new DistanceOracle(M);
 
         graphEnd = System.currentTimeMillis();
-        System.out.println(timeStamp() + "Graph done loading in "+ (graphEnd - graphStart)+"ms -> V: " + G.getV() + " E: " + G.getE());
+        System.out.println(timeStamp() + "Graph done loading in "+ (graphEnd - graphStart)+"ms -> V: " + G.V() + " E: " + G.E());
         System.out.println(timeStamp() + "Running " + n + " queries, each with a random source s and target t.");
         var formatTitle = title+"-"+dimacsName+"-dimacs-"+n+"-queries";
-        spExperiment(formatTitle, alg, M, G, generateRandomQueries(n, M.V()), D, n, printProgress);
+        spExperiment(formatTitle, alg, G, generateRandomQueries(n, M.V()), D, n, printProgress);
+    }
+
+    public static ArrayList<RouteQuery> generateRandomQueries(int n, int V, RouteCriterion[] c) {
+        var rnd = new Random();
+        var list = new ArrayList<RouteQuery>();
+        for(var i = 0; i < n; i++) {
+            var Q = new RouteQuery();
+            Q.setSource(rnd.nextInt(V));
+            Q.setTarget(rnd.nextInt(V));
+            Q.setCriteria(c);
+            list.add(Q);
+        }
+        return list;
     }
 
     public static ArrayList<RouteQuery> generateRandomQueries(int n, int V) {
@@ -128,11 +142,6 @@ public class Experiments {
         var list = new ArrayList<RouteQuery>();
         for(var i = 0; i < n; i++) {
             var Q = new RouteQuery();
-            Q.addCriterion(
-                    RouteCriteriaEvaluationType.DISTANCE,
-                    new EdgePropSet(EdgePropKey.DEFAULT, EdgePropValue.DEFAULT),
-                    1f
-            );
             Q.setSource(rnd.nextInt(V));
             Q.setTarget(rnd.nextInt(V));
             list.add(Q);
@@ -140,9 +149,10 @@ public class Experiments {
         return list;
     }
 
+
     public static void spJsonExperiment(String title, IShortestPathAlgorithm alg, String fileName, int n, boolean printProgress) {
         var P   = new GraphParser();
-        var M   = P.parseFromMyJson("resources/json/"+fileName+"/"+fileName+".json");
+        var M   = P.parseJsonModel("resources/json/"+fileName+"/"+fileName+".json");
         var formatTitle = title+"-"+fileName+"-"+n+"";
         buildSpExperiment(formatTitle, alg, M, n, printProgress);
     }
@@ -151,8 +161,24 @@ public class Experiments {
         var G   = M.generateGraph();
         var D   = new DistanceOracle(M);
         System.out.println(timeStamp() + "Running " + n + " queries, each with a random source s and target t.");
-        spExperiment(title, alg, M, G, generateRandomQueries(n, M.V()), D, n, printProgress);
+        spExperiment(title, alg, G, generateRandomQueries(n, M.V()), D, n, printProgress);
     }
+
+    public static void buildSpExperimentWithCriteria(String title, IShortestPathAlgorithm alg, DataModel M, int n, RouteCriterion[] c, boolean printProgress) {
+        var G   = M.generateGraph();
+        var D   = new DistanceOracle(M);
+        System.out.println(timeStamp() + "Running " + n + " queries, each with a random source s and target t.");
+        spExperiment(title, alg, G, generateRandomQueries(n, M.V(), c), D, n, printProgress);
+    }
+
+    public static void spCriteriaGeoJsonExperiment(String title, IShortestPathAlgorithm alg, String fileName, int n, RouteCriterion[] criteria, boolean printProgress) {
+        var P   = new GraphParser();
+        var M   = P.parseGeoJsonToModel("resources/geojson/"+fileName+".geojson");
+        var formatTitle = title+"-"+fileName+"-"+n+"";
+
+        buildSpExperimentWithCriteria(formatTitle, alg, M, n, criteria, printProgress);
+    }
+
 
     public static void main(String[] args) {
         //dijkstraSPExperiment(10000, "resources/algs4/", "1000EWD.txt", false);
@@ -169,7 +195,13 @@ public class Experiments {
         //spDimacsExperiment("astar-10", new Astar(10), "fla", 1000, true);
         //spDimacsExperiment("astar-100", new Astar(100), "fla", 1000, true);
 
-        spDimacsExperiment("astar-landmarks-1", new AstarLandmarks(1), "nyc", 10000, true);
+
+
+        var criteria = new RouteCriterion[1];
+        criteria[0] = new RouteCriterion(EdgeWeightType.DISTANCE, new EdgeProperty("foot", "yes"), 0f);
+        spCriteriaGeoJsonExperiment("dijkstra-criteria-foot-yes-0", new Dijkstra(), "hil", 1000, criteria, false);
+
+        //spDimacsExperiment("al-test-1", new AstarLandmarks(1), "nyc", 10000, true);
         //spDimacsExperiment("astar", new Astar(1), "fla", 10000, true);
         /*
         spDimacsExperiment("astar-10", new Astar(10), "nyc", 1000, true);

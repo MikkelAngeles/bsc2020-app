@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 
+export const criterionTemplate = {weightType:"DISTANCE",property:{key:"",value:""},weightFactor:1.0};
 export function useSelectionModel (props) {
     const [query, setQuery] = useState({
         source: -1,
@@ -46,6 +47,15 @@ export function useSelectionModel (props) {
         setQuery({...query, source: -1, target: -1});
     }
 
+    function handleAddCriterion(c) {
+          setQuery({...query, criteria: [...query.criteria, c]});
+    }
+
+    function handleRemoveCriterion(key, value) {
+        let rest = query.criteria.filter(e => e.property.key !== key || (e.property.key === key && e.property.value !== value));
+        setQuery({...query, criteria: rest});
+    }
+
     return {
         query,
         checked,
@@ -59,5 +69,8 @@ export function useSelectionModel (props) {
         setRouteFrom: handleSetRouteFrom,
         setRouteTo: handleSetRouteTo,
         setNearest: handleSetNearest,
+        criteria: query.criteria,
+        addCriterion: handleAddCriterion,
+        removeCriterion: handleRemoveCriterion
     }
 }

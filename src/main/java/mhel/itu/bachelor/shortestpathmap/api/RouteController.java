@@ -1,42 +1,61 @@
 package mhel.itu.bachelor.shortestpathmap.api;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import edu.princeton.cs.algs4.GrahamScan;
-import edu.princeton.cs.algs4.In;
 import mhel.itu.bachelor.shortestpathmap.algorithm.*;
+import mhel.itu.bachelor.shortestpathmap.api.dto.*;
+import mhel.itu.bachelor.shortestpathmap.model.*;
+import mhel.itu.bachelor.shortestpathmap.tool.*;
+
 import org.springframework.web.bind.annotation.*;
 
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Map;
+import java.util.Set;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
 public class RouteController {
-    DataModel model;
-    IShortestPathAlgorithm spAlgorithm;
-    SimpleGraph G;
+    IDataModel M;
+    IShortestPathAlgorithm SP;
+    IGraph G;
     DistanceOracle D = new DistanceOracle();
     GraphParser P  = new GraphParser();
 
-
     @GetMapping("/bounds")
     public BoundsDTO bounds() {
-        return new BoundsDTO(model.getMaxX(), model.getMinX(), model.getMaxY(), model.getMinY());
+        return new BoundsDTO(M.getMaxX(), M.getMinX(), M.getMaxY(), M.getMinY());
+    }
+
+    @GetMapping("/load/geojson/hil")
+    public GraphDTO loadGeoJsonHil() {
+        M = P.parseGeoJsonToModel("resources/geojson/hil.geojson");
+        D = new DistanceOracle(M);
+        return getGraph();
     }
 
     @GetMapping("/load/json/hil")
-    public GraphDTO loadJsonHi() {
-        var pa = "resources/json/hil/hil.json";
-        model = P.parseFromMyJson(pa);
-        D = new DistanceOracle(model);
+    public GraphDTO loadJsonHil() {
+        M = P.parseJsonModel("hil");
+        D = new DistanceOracle(M);
         return getGraph();
     }
 
     @GetMapping("/load/dimacs")
     public GraphDTO loadDimacs(@RequestParam(value = "path") String path) {
-        model = P.parseFromDimacsPath(path, false);
-        D = new DistanceOracle(model);
+        M = P.parseFromDimacsPath(path, false);
+        D = new DistanceOracle(M);
         return getGraph();
+    }
+
+    @GetMapping("/model/properties")
+    public Map<String, Set<String>> getPropertyMap() {
+        return M.getPropertyMap();
     }
 
     @GetMapping("/edges")
@@ -46,15 +65,14 @@ public class RouteController {
 
     @GetMapping("/vertices")
     public IVertex[] vertices () {
-        return model.getVertices();
+        return M.getVertices();
     }
 
     @GetMapping("/vertices/trimmed")
     public List<double[]> verticesTrimmed () {
         var lst = new ArrayList<double[]>();
         try {
-            var vertices = model.getVertices();
-
+            var vertices = M.getVertices();
             for (var v : vertices) {
                 if (v != null) lst.add(new double[]{v.X(), v.Y()});
             }
@@ -68,16 +86,33 @@ public class RouteController {
     public List<double[]> visited () {
         var lst = new ArrayList<double[]>();
         try {
-            var visited = spAlgorithm.getVisited();
+            var visited = SP.getVisited();
             for (var i : visited) {
                 if (i == null) continue;
-                var v = model.getVertex(i);
+                var v = M.getVertex(i);
                 lst.add(new double[]{v.X(), v.Y()});
             }
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
         return lst;
+    }
+
+    @GetMapping("/route/dijkstra/criteria")
+    public RouteResultDTO routeDijkstra (@RequestParam(value = "from") int from,
+                                         @RequestParam(value = "to") int to,
+                                         @RequestParam(value = "criteria") String criteria) {
+
+        var parsedCriteriaList = new Gson().fromJson(criteria, RouteCriterion[].class);
+        var query = new RouteQuery();
+        query.setSource(from);
+        query.setTarget(to);
+        query.setCriteria(parsedCriteriaList);
+
+        SP = new Dijkstra();
+        var dto = getRoute(query);
+        dto.algorithm = "Dijkstra";
+        return dto;
     }
 
     @GetMapping("/route/dijkstra")
@@ -86,13 +121,11 @@ public class RouteController {
         query.setSource(from);
         query.setTarget(to);
 
-        query.addCriterion(
-                RouteCriteriaEvaluationType.DISTANCE,
-                new EdgePropSet(EdgePropKey.DEFAULT, EdgePropValue.DEFAULT),
-                1f
-        );
-
-        spAlgorithm = new Dijkstra();
+        try {
+            SP = new Dijkstra();
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
         var dto = getRoute(query);
         dto.algorithm = "Dijkstra";
         return dto;
@@ -104,13 +137,25 @@ public class RouteController {
         query.setSource(from);
         query.setTarget(to);
 
-        query.addCriterion(
-                RouteCriteriaEvaluationType.DISTANCE,
-                new EdgePropSet(EdgePropKey.DEFAULT, EdgePropValue.DEFAULT),
-                1f
-        );
+        SP = new Astar(h);
+        var dto = getRoute(query);
+        dto.algorithm = "A*";
+        return dto;
+    }
 
-        spAlgorithm = new Astar(h);
+    @GetMapping("/route/astar/criteria")
+    public RouteResultDTO routeAstarCriteria (@RequestParam(value = "from") int from,
+                                              @RequestParam(value = "to") int to,
+                                              @RequestParam(value = "heuristic") double h,
+                                              @RequestParam(value = "criteria") String c) {
+
+        var parsedCriteriaList = new Gson().fromJson(c, RouteCriterion[].class);
+        var query = new RouteQuery();
+        query.setSource(from);
+        query.setTarget(to);
+        query.setCriteria(parsedCriteriaList);
+
+        SP = new Astar(h);
         var dto = getRoute(query);
         dto.algorithm = "A*";
         return dto;
@@ -124,35 +169,29 @@ public class RouteController {
         query.setSource(from);
         query.setTarget(to);
 
-        query.addCriterion(
-                RouteCriteriaEvaluationType.DISTANCE,
-                new EdgePropSet(EdgePropKey.DEFAULT, EdgePropValue.DEFAULT),
-                1f
-        );
-
-        spAlgorithm = new AstarLandmarks(h);
+        SP = new AstarLandmarks(h);
         var dto = getRoute(query);
         dto.algorithm = "A* Landmarks";
         return dto;
     }
 
 
-    //
-    /*Move to a repository*/
-    //
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    /*Route repository - move to it's own class and control it with an injected interface later*/
+    /////////////////////////////////////////////////////////////////////////////////////////////
     public GraphDTO getGraph() {
-        G = model.generateGraph();
-        model.generateRandomLandmarks(16);
+        G = M.generateGraph();
+        M.generateRandomLandmarks(16);
         var dto = new GraphDTO();
-        dto.E = model.E();
-        dto.V = model.V();
+        dto.E = M.E();
+        dto.V = M.V();
         dto.vertices = getVertices();
         if(dto.vertices.size() > 0) dto.verticesHull = calculateConvexHull(dto.vertices);
 
         dto.landmarks = getLandmarks();
         if(dto.landmarks.size() > 0) dto.landmarksHull = calculateConvexHull(dto.landmarks);
 
-        dto.bounds = new BoundsDTO(model.getMaxX(), model.getMinX(), model.getMaxY(), model.getMinY());
+        dto.bounds = new BoundsDTO(M.getMaxX(), M.getMinX(), M.getMaxY(), M.getMinY());
         dto.edges = getEdges();
         return dto;
     }
@@ -160,12 +199,12 @@ public class RouteController {
     public RouteResultDTO getRoute(RouteQuery q) {
         var dto         = new RouteResultDTO();
         long before     = System.nanoTime();
-        spAlgorithm.perform(G, model, D, q);
+        SP.load(G, D, q);
         long after      = System.nanoTime();
         dto.elapsed     = after - before;
-        dto.hasPath     = spAlgorithm.hasPath(q.getTarget());
-        var rs          = spAlgorithm.pathTo(q.getTarget());
-        dto.dist        = spAlgorithm.distTo(q.getTarget());
+        dto.hasPath     = SP.hasPath(q.getTarget());
+        var rs          = SP.pathTo(q.getTarget());
+        dto.dist        = SP.distTo(q.getTarget());
 
         var first = true;
         IEdge last = null;
@@ -182,17 +221,17 @@ public class RouteController {
         if(last != null) lst.add(new double[]{last.from().X(), last.from().Y()});
         dto.route = lst;
         dto.visited = getVisited();
-        dto.hull = calculateConvexHull(verticesQueueToDoubleArr(spAlgorithm.getVisited()));
+        dto.hull = calculateConvexHull(verticesQueueToDoubleArr(SP.getVisited()));
 
         return dto;
     }
 
     public List<double[]> getVisited() {
         var lst = new ArrayList<double[]>();
-        var visited = spAlgorithm.getVisited();
+        var visited = SP.getVisited();
         for (var i : visited) {
             if (i == null) continue;
-            var v = model.getVertex(i);
+            var v = M.getVertex(i);
             lst.add(new double[]{v.X(), v.Y()});
         }
         return lst;
@@ -200,32 +239,15 @@ public class RouteController {
 
     public List<double[]> getLandmarks() {
         var lst = new ArrayList<double[]>();
-        for (var i : model.getLandmarksTable().entrySet()) {
-            var v = model.getVertex(i.getKey());
+        for (var i : M.getLandmarksDistanceTable().entrySet()) {
+            var v = M.getVertex(i.getKey());
             lst.add(new double[]{v.X(), v.Y()});
         }
-/*
-        var hull = calculateConvexHull(getVertices());
-        var landmarks = new int[16];
-        var rnd = new Random();
-        for(var i = 0; i < 16; i++) {
-            var rs = hull.get(rnd.nextInt(hull.size()));
-            lst.add(new double[]{rs[0], rs[1]});
-            //landmarks[i] = hull.get(rnd.nextInt(hull.size()));
-        }
-
-        *//*model.generateRandomLandmarks(16);
-        for (var i : model.getLandmarks()) {
-            var v = model.getVertex(i);
-            lst.add(new double[]{v.X(), v.Y()});
-            break;
-        }*/
-
         return lst;
     }
     public List<double[]> getVertices() {
         var lst = new ArrayList<double[]>();
-        for (var v : model.getVertices()) {
+        for (var v : M.getVertices()) {
             if (v != null) lst.add(new double[]{v.X(), v.Y()});
         }
         return lst;
@@ -233,16 +255,16 @@ public class RouteController {
 
     public List<EdgeDTO> getEdgesByVertex(int v) {
         var lst = new ArrayList<EdgeDTO>();
-        for (var e : model.getAdjacent(v)) {
-            if (e != null) lst.add(new EdgeDTO(e.index(), e.from().I(), e.to().I(), model.getDist(e.index())));
+        for (var e : M.getAdjacent(v)) {
+            if (e != null) lst.add(new EdgeDTO(e.index(), e.from().I(), e.to().I(), M.getDist(e.index())));
         }
         return lst;
     }
 
     public List<EdgeDTO> getEdges() {
         var lst = new ArrayList<EdgeDTO>();
-        for (var e : model.getEdges()) {
-            if (e != null) lst.add(new EdgeDTO(e.index(), e.from().I(), e.to().I(), model.getDist(e.index())));
+        for (var e : M.getEdges()) {
+            if (e != null) lst.add(new EdgeDTO(e.index(), e.from().I(), e.to().I(), M.getDist(e.index())));
         }
         return lst;
     }
@@ -250,7 +272,7 @@ public class RouteController {
     public List<double[]> verticesQueueToDoubleArr(Queue<Integer> queue) {
         var lst = new ArrayList<double[]>();
         for (var i : queue) {
-            var v = model.getVertex(i);
+            var v = M.getVertex(i);
             lst.add(new double[]{v.X(), v.Y()});
         }
         return lst;
@@ -259,7 +281,7 @@ public class RouteController {
     public List<double[]> verticesListToDoubleArr(List<Integer> arr) {
         var lst = new ArrayList<double[]>();
         for (var i : arr) {
-            var v = model.getVertex(i);
+            var v = M.getVertex(i);
             lst.add(new double[]{v.X(), v.Y()});
         }
         return lst;

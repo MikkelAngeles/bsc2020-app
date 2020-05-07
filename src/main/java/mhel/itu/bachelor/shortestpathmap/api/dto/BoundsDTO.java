@@ -1,4 +1,4 @@
-package mhel.itu.bachelor.shortestpathmap.algorithm;
+package mhel.itu.bachelor.shortestpathmap.api.dto;
 
 public class BoundsDTO {
     public double maxX;

@@ -1,6 +1,8 @@
-package mhel.itu.bachelor.shortestpathmap.algorithm;
+package mhel.itu.bachelor.shortestpathmap.model;
 
-public class SimpleVertex implements IVertex {
+import java.io.Serializable;
+
+public class SimpleVertex implements IVertex, Serializable {
     public int i;
     public double x;
     public double y;

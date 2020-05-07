@@ -1,5 +1,7 @@
 package mhel.itu.bachelor.shortestpathmap.algorithm;
 
+import mhel.itu.bachelor.shortestpathmap.model.EnhancedShape;
+
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.io.Serializable;

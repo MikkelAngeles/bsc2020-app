@@ -1,6 +1,4 @@
-package mhel.itu.bachelor.shortestpathmap.api;
-
-import mhel.itu.bachelor.shortestpathmap.algorithm.BoundsDTO;
+package mhel.itu.bachelor.shortestpathmap.api.dto;
 
 import java.util.List;
 

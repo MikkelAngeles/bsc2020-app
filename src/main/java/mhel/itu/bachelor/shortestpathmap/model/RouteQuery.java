@@ -1,8 +1,8 @@
-package mhel.itu.bachelor.shortestpathmap.algorithm;
+package mhel.itu.bachelor.shortestpathmap.model;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.Arrays;
 public class RouteQuery {
     int source;
     int target;
@@ -44,7 +44,13 @@ public class RouteQuery {
         return criteria;
     }
 
-    public void addCriterion(RouteCriteriaEvaluationType eval, EdgePropSet set, float weightFactor) {
-        criteria.add(new RouteCriterion(eval, set, weightFactor));
+    public void addCriterion(EdgeWeightType type, EdgeProperty property, float weightFactor) {
+        criteria.add(new RouteCriterion(type, property, weightFactor));
+    }
+    public void setCriteria(RouteCriterion[] criteria) {
+        this.criteria  = Arrays.asList(criteria);
+    }
+    public void setCriteria(List<RouteCriterion> criteria) {
+        this.criteria = criteria;
     }
 }

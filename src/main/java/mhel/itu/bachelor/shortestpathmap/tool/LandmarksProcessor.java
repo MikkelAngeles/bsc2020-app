@@ -1,5 +1,7 @@
-package mhel.itu.bachelor.shortestpathmap.processing;
+package mhel.itu.bachelor.shortestpathmap.tool;
 import mhel.itu.bachelor.shortestpathmap.algorithm.*;
+import mhel.itu.bachelor.shortestpathmap.model.*;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -7,20 +9,15 @@ import java.io.IOException;
 
 public class LandmarksProcessor {
 
-    public static void processDistToLandmark(IDataModel M, SimpleGraph G, DistanceOracle D, IShortestPathAlgorithm sp, int landmark, String fileName) {
+    public static void processDistToLandmark(IDataModel M, IGraph G, DistanceOracle D, IShortestPathAlgorithm sp, int landmark, String fileName) {
         var Q = new RouteQuery();
         Q.setSource(landmark); //reversed because the edges in the graph are expected to be reversed by the parser.
-
-        Q.addCriterion(
-                RouteCriteriaEvaluationType.DISTANCE,
-                new EdgePropSet(EdgePropKey.DEFAULT, EdgePropValue.DEFAULT),
-                1f
-        );
+        Q.addCriterion(EdgeWeightType.DISTANCE, new EdgeProperty("default"), 1f);
 
         long start = System.nanoTime();
         System.out.println("Processing " + M.V() + " distances to landmark vertex" + landmark);
 
-        sp.perform(G, M, D, Q);
+        sp.load(G, D, Q);
 
         try {
             var fileObj = new File(fileName);
@@ -88,15 +85,14 @@ public class LandmarksProcessor {
     public static void processRandomLandmarksFromJson(int count, String dir, String file) {
         var pa  = dir + file;
         var P   = new GraphParser();
-        var M   = P.parseFromMyJsonReverseEdges(pa);
+        var M   = P.parseJsonModelReversedEdges(pa);
         var G   = M.generateGraph();
-        M.generateRandomLandmarks(count);
 
         var dOracle = new DistanceOracle(M);
 
         var D   = new Dijkstra();
         var i = 0;
-        for(var l : M.getLandmarks()) {
+        for(var l : M.generateRandomLandmarks(count)) {
             var fileName = dir+"/landmarks/dist/landmark-dist-"+i+".txt";
             processDistToLandmark(M, G, dOracle, D, l, fileName);
             i++;
@@ -106,13 +102,12 @@ public class LandmarksProcessor {
     public static void processLandmarksFromJson(int[] list, String dir, String file) {
         var pa  = dir + file;
         var P   = new GraphParser();
-        var M   = P.parseFromMyJsonReverseEdges(pa);
+        var M   = P.parseJsonModelReversedEdges(pa);
         var G   = M.generateGraph();
         var D   = new Dijkstra();
-        var dOracle = new DistanceOracle(M);
-
+        var O   = new DistanceOracle(M);
         for(var l : list) {
-            processDistToLandmark(M, G, dOracle, D, l, dir);
+            processDistToLandmark(M, G, O, D, l, dir);
         }
     }
 
@@ -121,14 +116,11 @@ public class LandmarksProcessor {
         var M   = P.parseFromDimacsPath(dir, true);
         var G   = M.generateGraph();
         var D   = new Dijkstra();
-        M.generateRandomLandmarks(count);
-
-        var dOracle = new DistanceOracle(M);
-
-        var i = 0;
-        for(var l : M.getLandmarks()) {
+        var O   = new DistanceOracle(M);
+        var i   = 0;
+        for(var l : M.generateRandomLandmarks(count)) {
             var fileName = dir+"/landmarks/dist/landmark-dist-"+i+".txt";
-            processDistToLandmark(M, G, dOracle, D, l, fileName);
+            processDistToLandmark(M, G, O, D, l, fileName);
             i++;
         }
     }
@@ -138,13 +130,11 @@ public class LandmarksProcessor {
         var M   = P.parseFromDimacsPath(dir, true);
         var G   = M.generateGraph();
         var D   = new Dijkstra();
-
-        var dOracle = new DistanceOracle(M);
-
-        var i = 0;
+        var O   = new DistanceOracle(M);
+        var i   = 0;
         for(var l : list) {
             var fileName = dir+"/landmarks/dist/landmark-dist-"+i+".txt";
-            processDistToLandmark(M, G, dOracle, D, l, fileName);
+            processDistToLandmark(M, G, O, D, l, fileName);
             i++;
         }
     }
