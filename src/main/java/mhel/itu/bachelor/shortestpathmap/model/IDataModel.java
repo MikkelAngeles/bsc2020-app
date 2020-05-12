@@ -38,7 +38,7 @@ public interface IDataModel {
 
     //Travel time
     double[] getTimeTable();
-    void addTravelTime(int index, int t);
+    void addTravelTime(int index, double t);
     double getTravelTime(int index);
 
     //Landmarks

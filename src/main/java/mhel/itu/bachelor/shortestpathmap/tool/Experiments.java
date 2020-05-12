@@ -97,7 +97,6 @@ public class Experiments {
         printFullLaTeXTable(fileName, n, graph.V(), graph.E() ,dijkstraDistance, dijkstraElapsed);
     }
 
-
     public static void spDimacsExperiment(String title, IShortestPathAlgorithm alg, String dimacsName, int n, boolean printProgress) {
         var P   = new GraphParser();
 
@@ -175,10 +174,19 @@ public class Experiments {
         var P   = new GraphParser();
         var M   = P.parseGeoJsonToModel("resources/geojson/"+fileName+".geojson");
         var formatTitle = title+"-"+fileName+"-"+n+"";
-
         buildSpExperimentWithCriteria(formatTitle, alg, M, n, criteria, printProgress);
     }
 
+    public static void spCriteriaDimacsExperiment(String title, IShortestPathAlgorithm alg, String dimacsName, int n, RouteCriterion[] criteria,  boolean printProgress) {
+        var P   = new GraphParser();
+        var M   = P.parseDimacsFromIn(
+                new In("resources/dimacs/"+dimacsName+"/vertices.co"),
+                new In("resources/dimacs/"+dimacsName+"/distance.gr"),
+                new In("resources/dimacs/"+dimacsName+"/time.gr"),
+                false);
+        var formatTitle = title+"-"+dimacsName+"-"+n+"";
+        buildSpExperimentWithCriteria(formatTitle, alg, M, n, criteria, printProgress);
+    }
 
     public static void main(String[] args) {
         //dijkstraSPExperiment(10000, "resources/algs4/", "1000EWD.txt", false);
@@ -195,11 +203,18 @@ public class Experiments {
         //spDimacsExperiment("astar-10", new Astar(10), "fla", 1000, true);
         //spDimacsExperiment("astar-100", new Astar(100), "fla", 1000, true);
 
-
-
         var criteria = new RouteCriterion[1];
+        criteria[0] = new RouteCriterion(EdgeWeightType.TIME, new EdgeProperty("#default", "#default"), 1f);
+        //spCriteriaGeoJsonExperiment("dijkstra-criteria-time-default", new Dijkstra(), "hil", 1000, criteria, false);
+        spCriteriaDimacsExperiment("dijkstra-criteria-time-default", new Dijkstra(), "nyc", 1000, criteria, true);
+
+        criteria[0] = new RouteCriterion(EdgeWeightType.DISTANCE, new EdgeProperty("#default", "#default"), 1f);
+        //spCriteriaGeoJsonExperiment("dijkstra-criteria-time-default", new Dijkstra(), "hil", 1000, criteria, false);
+        spCriteriaDimacsExperiment("dijkstra-criteria-distance-default", new Dijkstra(), "nyc", 1000, criteria, true);
+
+       /* var criteria = new RouteCriterion[1];
         criteria[0] = new RouteCriterion(EdgeWeightType.DISTANCE, new EdgeProperty("foot", "yes"), 0f);
-        spCriteriaGeoJsonExperiment("dijkstra-criteria-foot-yes-0", new Dijkstra(), "hil", 1000, criteria, false);
+        spCriteriaGeoJsonExperiment("dijkstra-criteria-foot-yes-0", new Dijkstra(), "hil", 1000, criteria, false);*/
 
         //spDimacsExperiment("al-test-1", new AstarLandmarks(1), "nyc", 10000, true);
         //spDimacsExperiment("astar", new Astar(1), "fla", 10000, true);

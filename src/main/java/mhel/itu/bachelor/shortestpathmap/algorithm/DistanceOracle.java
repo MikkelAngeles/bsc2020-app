@@ -2,14 +2,16 @@ package mhel.itu.bachelor.shortestpathmap.algorithm;
 
 import mhel.itu.bachelor.shortestpathmap.model.*;
 
+import java.util.Comparator;
 import java.util.List;
 
 import static java.lang.Double.isNaN;
 
 public class DistanceOracle {
     private IDataModel dataModel;
-    private double distUpper = 1;
-    private double timeUpper = 1;
+    private double distUpper    = 1;  //The highest recorded value from the physical distance table
+    private double timeUpper    = 1;  //The highest recorded value from the time distance table
+    private double speedLower   = 0;  //The lowest recorded speed from the edge properties.
 
     public DistanceOracle() { }
 
@@ -17,24 +19,41 @@ public class DistanceOracle {
         this.dataModel = dataModel;
 
         var dMax = Double.NEGATIVE_INFINITY;
-        for(var d : dataModel.getDistanceTable()) if(d > dMax) dMax = d;
-        distUpper = dMax;
-
         var tMax = Double.NEGATIVE_INFINITY;
-        for(var t : dataModel.getTimeTable()) if(t > tMax) tMax = t;
-        timeUpper = tMax;
+        var sMin = Double.POSITIVE_INFINITY;
+
+        for(var i = 0; i < dataModel.E(); i++) {
+            var dist = dataModel.getDistanceTable()[i];
+            if (dist > dMax) dMax = dist;
+
+            var time = dataModel.getTimeTable()[i];
+            if(time > tMax) tMax = time;
+
+            var speed = distTimeToSpeed(dist, time);
+            if(speed < sMin) sMin = speed;
+        }
+
+        distUpper   = dMax;
+        timeUpper   = tMax;
+        speedLower  = sMin;
+
+       /* dataModel.getPropertyMap()
+                .get("maxspeed")
+                .stream()
+                .min(Comparator.comparingInt(Integer::parseInt))
+                .ifPresent(rs -> speedLower = Integer.parseInt(rs));*/
     }
 
     public double cost(int edge, RouteQuery q) {
-        if(q.getCriteria() == null || q.getCriteria().isEmpty()) return dist(edge); //Default is normal distance.
+        if(q.getCriteria() == null || q.getCriteria().isEmpty()) return dist(edge); //Default is physical distance.
 
         var eDist = dist(edge);
         var eTime = time(edge);
 
-        var applyTimeFactor = false;
-        var applyDistFactor = false;
         var distAccum = 0;
+        var distCount = 0;
         var timeAccum = 0;
+        var timeCount = 0;
 
         for(var c : q.getCriteria()) {
             var curr_key = c.getProperty().getKey();
@@ -47,18 +66,18 @@ public class DistanceOracle {
             var factor = c.getWeightFactor();
             if(c.getWeightType().equals(EdgeWeightType.DISTANCE)) {
                 distAccum += factor;
-                applyDistFactor = true;
+                distCount++;
             }
             else if(c.getWeightType().equals(EdgeWeightType.TIME)) {
                 timeAccum += factor;
-                applyTimeFactor = true;
+                timeCount++;
             }
         }
 
-        var distScaled = applyDistFactor ? (eDist * distAccum) : eDist;
-        var timeScaled = applyTimeFactor ? (eTime * timeAccum) : eTime;
+        var distScaled = distCount > 0 ? (eDist * (distAccum / distCount)) : eDist;
+        var timeScaled = timeCount > 0 ? (eTime * (timeAccum / timeCount)) : eTime;
 
-        var sum = applyTimeFactor ? (timeScaled + distScaled) : distScaled;
+        var sum = timeCount > 0 ? (distCount > 0 ? (timeScaled + distScaled) : timeScaled) : distScaled;
         if(sum < 0) throw new IllegalArgumentException("Cost can't be negative!");
         return sum;
     }
@@ -85,7 +104,6 @@ public class DistanceOracle {
         return (d / distUpper) / 2;
     }
 
-
     public double landmarkDist(int n, int t) {
         double max = 0;
         if(n == t) return max;
@@ -109,20 +127,6 @@ public class DistanceOracle {
         return max;
     }
 
-    public double accumRealDist(List<Double> list) {
-        return list.stream().mapToDouble(e -> (e * 2) * distUpper).sum();
-    }
-
-    public double accumRealTime(List<Double> list) {
-        return list.stream().mapToDouble(e -> (e * 2) * timeUpper).sum();
-    }
-
-    public double manhattan(double x1,  double y1, double x2, double y2) {
-        var delta_x = Math.abs(x2 - x1);
-        var delta_y = Math.abs(y2 - y1);
-        return (delta_x + delta_y);
-    }
-
     public double haversine(int v, int w) {
         var n = dataModel.getVertex(v);
         var t = dataModel.getVertex(w);
@@ -139,12 +143,37 @@ public class DistanceOracle {
 
         double a = Math.pow(Math.sin(dLat / 2),2) + Math.pow(Math.sin(dLon / 2),2) * Math.cos(lat1) * Math.cos(lat2);
         double c = 2 * Math.asin(Math.sqrt(a));
-        return R * c;
+        double errorFactor = (1 - 0.055);
+        return (R * c) * errorFactor;
     }
 
-    //Todo
-    public double distanceToTime(double dist, double speed) {
+    public static double distSpeedToTime(double dist, double speed) {
         return dist / speed;
+    }
+
+    public static double distTimeToSpeed(double dist, double time) {
+        return dist / time;
+    }
+
+    public double haversineTime(int v, int w) {
+        var n = dataModel.getVertex(v);
+        var t = dataModel.getVertex(w);
+        var tmp = haversine(n.X(), n.Y(), t.X(), t.Y());
+        return getTimeFactor(distSpeedToTime(tmp, speedLower));
+    }
+
+    public double accumRealDist(List<Double> list) {
+        return list.stream().mapToDouble(e -> (e * 2) * distUpper).sum();
+    }
+
+    public double accumRealTime(List<Double> list) {
+        return list.stream().mapToDouble(e -> (e * 2) * timeUpper).sum();
+    }
+
+    public double manhattan(double x1,  double y1, double x2, double y2) {
+        var delta_x = Math.abs(x2 - x1);
+        var delta_y = Math.abs(y2 - y1);
+        return (delta_x + delta_y);
     }
 
 }

@@ -1,7 +1,9 @@
 package mhel.itu.bachelor.shortestpathmap.tool;
 import com.google.gson.*;
 
+import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
+import edu.princeton.cs.algs4.Bag;
 import edu.princeton.cs.algs4.In;
 import mhel.itu.bachelor.shortestpathmap.algorithm.DistanceOracle;
 import mhel.itu.bachelor.shortestpathmap.model.*;
@@ -37,7 +39,7 @@ public class GraphParser {
         dm.setLandmarksDistanceTable(landmarksDist);
 
         var landmarksTime = loadLandmarks("resources/dimacs/"+path+"/landmarks/time");
-        dm.setLandmarksDistanceTable(landmarksTime);
+        dm.setLandmarksTimeTable(landmarksTime);
         return dm;
     }
 
@@ -51,6 +53,14 @@ public class GraphParser {
         edges.readLine();
         edges.readLine();
         edges.readLine();
+
+        travelTime.readLine();
+        travelTime.readLine();
+        travelTime.readLine();
+        travelTime.readLine();
+        travelTime.readLine();
+        travelTime.readLine();
+        travelTime.readLine();
 
         var str     = vertices.readLine();
         var split   = str.split(" ");
@@ -118,21 +128,40 @@ public class GraphParser {
 
         var dm = new DataModel(tmpVertices.size(), tmpEdges.size());
 
+        var tmpEdgeTime = new ArrayList<DimacsEdge>();
+        edgeCollisions = new HashMap<>();
+        for (int i = 0; i < E; i++) {
+            travelTime.readString();
+            var v = travelTime.readInt() - 1; //Subtract 1 because dimacs indices starts at 1.
+            var w = travelTime.readInt() - 1; //Subtract 1 because dimacs indices starts at 1.
+            var dist = travelTime.readInt();
+
+            var cur_set = edgeCollisions.get(v);
+            if(cur_set == null) cur_set = new HashSet<>();
+            if(cur_set.contains(w)) continue;
+
+            tmpEdgeTime.add(new DimacsEdge(v, w, dist));
+            cur_set.add(w);
+            edgeCollisions.put(v, cur_set);
+        }
+
         //Cleaned vertices
         for(var v : tmpVertices.entrySet()) {
             var cur = v.getValue();
             dm.addVertex(v.getKey(), cur.getX(), cur.getY());
         }
         //Cleaned edges
+        var i = 0;
         for (var t : tmpEdges) {
             var e = reversedEdges ? dm.addEdge(t.w, t.v) : dm.addEdge(t.v, t.w);
             dm.addDist(e, t.dist);
+            dm.addTravelTime(e, tmpEdgeTime.get(i++).dist);  //Strictly assuming that the order of the files is correct, otherwise this will break everything.
         }
 
         return dm;
     }
 
-    public Map<Integer, HashMap<Integer, Double>> loadLandmarks(String path) {
+    public static Map<Integer, HashMap<Integer, Double>> loadLandmarks(String path) {
 
         var files = new ArrayList<String>();
         try (Stream<Path> walk = Files.walk(Paths.get(path))) {
@@ -226,7 +255,7 @@ public class GraphParser {
         dm.setLandmarksDistanceTable(landmarksDist);
 
         var landmarksTime = loadLandmarks("resources/json/"+path+"/landmarks/time");
-        dm.setLandmarksDistanceTable(landmarksTime);
+        dm.setLandmarksTimeTable(landmarksTime);
         return dm;
     }
 
@@ -296,9 +325,8 @@ public class GraphParser {
                     continue;
                 }
                 else {
-                    var dist    = distanceOracle.haversine(from.getX(), from.getY(), to.getX(), to.getY());
-                    var time    = distanceOracle.haversine(from.getX(), from.getY(), to.getX(), to.getY());
-                    var edgeTo  = new ParsedEdge(from, to, dist, time, propSet);
+                    var dist    = DistanceOracle.haversine(from.getX(), from.getY(), to.getX(), to.getY());
+                    var edgeTo  = new ParsedEdge(from, to, dist, propSet);
                     pg.edges.add(edgeTo);
 
                     //Prevent duplicates.
@@ -310,7 +338,7 @@ public class GraphParser {
                     var oneWay = propSet.contains(new EdgeProperty("oneway", ""));
 
                     if(!oneWay) {
-                        var edgeFrom = new ParsedEdge(to, from, dist, time, propSet);
+                        var edgeFrom = new ParsedEdge(to, from, dist, propSet);
                         pg.edges.add(edgeFrom);
 
                         //Prevent duplicates.
@@ -324,7 +352,6 @@ public class GraphParser {
             }
         }
 
-        var v = pg.getMap().size();
         var e = pg.getEdges().size();
         var dm = new DataModel(indexLookup.size(), e);
 
@@ -343,10 +370,13 @@ public class GraphParser {
 
             var newEdge = dm.addEdge(from, to);
             dm.addDist(newEdge, edge.distance);
-            dm.addTravelTime(newEdge, 1);
+
+            var speed = 50; //km/t - default speed limit in denmark.
             for(var prop : edge.getProps()) {
                 dm.addEdgeProperty(newEdge, prop);
+                if(prop.getKey().equals("maxspeed")) speed = Integer.parseInt(prop.getValue());
             }
+            dm.addTravelTime(newEdge, DistanceOracle.distSpeedToTime(edge.distance, speed));
         }
 
         return  dm;
@@ -368,14 +398,12 @@ public class GraphParser {
         public Point2D from;
         public Point2D to;
         public double distance;
-        public double time;
         public Set<EdgeProperty> props;
 
-        public ParsedEdge(Point2D from, Point2D to, double distance, double time, Set<EdgeProperty> props) {
+        public ParsedEdge(Point2D from, Point2D to, double distance, Set<EdgeProperty> props) {
             this.from = from;
             this.to = to;
             this.distance = distance;
-            this.time = time;
             this.props = props;
         }
 
@@ -401,14 +429,6 @@ public class GraphParser {
 
         public void setDistance(double distance) {
             this.distance = distance;
-        }
-
-        public double getTime() {
-            return time;
-        }
-
-        public void setTime(double time) {
-            this.time = time;
         }
 
         public Set<EdgeProperty> getProps() {
@@ -465,12 +485,74 @@ public class GraphParser {
         }
     }
 
-    public static void main(String[] args) {
-        var p = new GraphParser();
-        var rs = p.parseGeoJsonToModel("resources/geojson/hil.geojson");
-        //save(rs);
+    public static void exportDataModelToJson(DataModel m, String modelName) throws IOException {
+        var gson        = new GsonBuilder().setPrettyPrinting().create();
+        var fw          = new FileWriter("resources/json/"+modelName+"/model.json");
+        gson.toJson(m, fw);
+        fw.close();
+    }
 
-        //var loaded = load();
-        System.out.println("kekw");
+    public static DataModel importModelFromJson(String modelName) throws FileNotFoundException {
+        var gson = new Gson();
+        var model           = gson.fromJson(new FileReader("resources/json/"+modelName+"/model.json"), JsonObject.class);
+        var V               = model.getAsJsonPrimitive("V").getAsInt();
+        var E               = model.getAsJsonPrimitive("E").getAsInt();
+        var vertices        = gson.fromJson(model.getAsJsonArray("vertices"), SimpleVertex[].class);
+        var edges           = model.getAsJsonArray("edges");
+        var adj             = (Bag<IEdge>[]) new Bag[E];
+        for (int i = 0; i < E; i++) adj[i] = new Bag<>();
+
+        var parsedEdges = new SimpleEdge[edges.size()];
+
+        for (var e : edges) {
+            var cur = e.getAsJsonObject();
+            var i   = cur.getAsJsonPrimitive("index").getAsInt();
+            var v   = gson.fromJson(e.getAsJsonObject().get("from"), SimpleVertex.class);
+            var w   = gson.fromJson(e.getAsJsonObject().get("to"), SimpleVertex.class);
+            parsedEdges[i] = new SimpleEdge(i, v, w);
+            adj[v.i].add(parsedEdges[i]);
+        }
+
+        var dist            = gson.fromJson(model.getAsJsonArray("distanceTable"), double[].class);
+        var time            = gson.fromJson(model.getAsJsonArray("timeTable"), double[].class);
+
+        var type = new TypeToken<Map<Integer, HashMap<Integer, Double>>>(){}.getType();
+        Map<Integer, HashMap<Integer, Double>> landmarksDistanceTable = gson.fromJson(model.getAsJsonObject("landmarksDistanceTable"), type);
+
+        type = new TypeToken<Map<Integer, HashMap<Integer, Double>>>(){}.getType();
+        Map<Integer, HashMap<Integer, Double>> landmarksTimeTable = gson.fromJson(model.getAsJsonObject("landmarksTimeTable"), type);
+
+        type = new TypeToken<Map<Integer, Set<EdgeProperty>>>(){}.getType();
+        Map<Integer, Set<EdgeProperty>> edgePropertyTable   = gson.fromJson(model.getAsJsonObject("edgePropertyTable"), type);
+
+        type = new TypeToken<Map<String, Set<String>>>(){}.getType();
+        Map<String, Set<String>> propertyMap = gson.fromJson(model.getAsJsonObject("propertyMap"), type);
+
+        var maxX               = model.getAsJsonPrimitive("maxX").getAsDouble();
+        var minX               = model.getAsJsonPrimitive("minX").getAsDouble();
+        var maxY               = model.getAsJsonPrimitive("maxY").getAsDouble();
+        var minY               = model.getAsJsonPrimitive("minY").getAsDouble();
+        var counter            = model.getAsJsonPrimitive("edgeIndexCounter").getAsInt();
+
+        var m = new DataModel(
+                V,
+                E,
+                vertices,
+                parsedEdges,
+                adj,
+                dist,
+                time,
+                landmarksDistanceTable,
+                landmarksTimeTable,
+                edgePropertyTable,
+                propertyMap,
+                maxX,
+                minX,
+                maxY,
+                minY,
+                counter
+        );
+
+        return m;
     }
 }

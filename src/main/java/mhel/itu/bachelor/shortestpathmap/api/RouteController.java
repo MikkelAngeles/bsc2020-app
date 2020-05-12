@@ -10,6 +10,7 @@ import mhel.itu.bachelor.shortestpathmap.tool.*;
 
 import org.springframework.web.bind.annotation.*;
 
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,6 +36,13 @@ public class RouteController {
     @GetMapping("/load/geojson/hil")
     public GraphDTO loadGeoJsonHil() {
         M = P.parseGeoJsonToModel("resources/geojson/hil.geojson");
+
+        var landmarksDist = P.loadLandmarks("resources/json/hil/landmarks/dist");
+        M.setLandmarksDistanceTable(landmarksDist);
+
+        var landmarksTime = P.loadLandmarks("resources/json/hil/landmarks/time");
+        M.setLandmarksTimeTable(landmarksTime);
+
         D = new DistanceOracle(M);
         return getGraph();
     }

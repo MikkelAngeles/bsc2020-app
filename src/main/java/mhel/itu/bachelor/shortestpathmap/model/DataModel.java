@@ -35,6 +35,32 @@ public class DataModel implements IDataModel, Serializable {
 
     private int edgeIndexCounter;
 
+    //Used to set model by imported files. Only use if the model was exported directly from a valid DataModel.
+    public DataModel(int v, int e, IVertex[] vertices, IEdge[] edges,
+                     Bag<IEdge>[] adj, double[] distanceTable, double[] timeTable,
+                     Map<Integer, HashMap<Integer, Double>> landmarksDistanceTable,
+                     Map<Integer, HashMap<Integer, Double>> landmarksTimeTable,
+                     Map<Integer, Set<EdgeProperty>> edgePropertyTable,
+                     Map<String, Set<String>> propertyMap,
+                     double maxX, double minX, double maxY, double minY, int edgeIndexCounter) {
+        V = v;
+        E = e;
+        this.vertices = vertices;
+        this.edges = edges;
+        this.adj = adj;
+        this.distanceTable = distanceTable;
+        this.timeTable = timeTable;
+        this.landmarksDistanceTable = landmarksDistanceTable;
+        this.landmarksTimeTable = landmarksTimeTable;
+        this.edgePropertyTable = edgePropertyTable;
+        this.propertyMap = propertyMap;
+        this.maxX = maxX;
+        this.minX = minX;
+        this.maxY = maxY;
+        this.minY = minY;
+        this.edgeIndexCounter = edgeIndexCounter;
+    }
+
     public DataModel(int V, int E) {
         this.V                      = V;
         this.E                      = E;
@@ -52,6 +78,11 @@ public class DataModel implements IDataModel, Serializable {
         for (int i = 0; i < E; i++) {
             adj[i] = new Bag<>();
         }
+
+        //Secure the default property implicit for all edges.
+        var defaultSet = new HashSet<String>();
+        defaultSet.add("#default");
+        propertyMap.put("#default", defaultSet);
     }
 
     @Override
@@ -122,7 +153,7 @@ public class DataModel implements IDataModel, Serializable {
     }
 
     @Override
-    public void addTravelTime(int index, int t) {
+    public void addTravelTime(int index, double t) {
         timeTable[index] = t;
     }
 
@@ -144,7 +175,7 @@ public class DataModel implements IDataModel, Serializable {
 
     @Override
     public void setLandmarksTimeTable(Map<Integer, HashMap<Integer, Double>> landmarks) {
-        landmarksDistanceTable = landmarks;
+        landmarksTimeTable = landmarks;
     }
 
     @Override
@@ -163,12 +194,14 @@ public class DataModel implements IDataModel, Serializable {
     }
 
     public EdgeProperty getEdgeProperty(int index, String key) {
+        if(key.equals("#default")) return new EdgeProperty("#default", "#default");
         for(var p : edgePropertyTable.get(index)) if(p.getKey().equals(key)) return p;
         return null;
     }
 
     @Override
     public boolean hasEdgeProperty(int index, EdgeProperty prop) {
+        if(prop.getKey().equals("#default")) return true;
         var rs = edgePropertyTable.get(index);
 
         for(var p : rs) {
