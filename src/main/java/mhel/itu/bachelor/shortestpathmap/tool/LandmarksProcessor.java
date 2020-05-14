@@ -12,7 +12,7 @@ public class LandmarksProcessor {
     public static void processDistToLandmark(IDataModel M, IGraph G, DistanceOracle D, IShortestPathAlgorithm sp, int landmark, String fileName) {
         var Q = new RouteQuery();
         Q.setSource(landmark); //reversed because the edges in the graph are expected to be reversed by the parser.
-        Q.addCriterion(EdgeWeightType.DISTANCE, new EdgeProperty("default"), 1f);
+        Q.addCriterion(EdgeWeightType.DISTANCE, new EdgeProperty("#default", "#default"), 1f);
 
         long start = System.nanoTime();
         System.out.println("Processing " + M.V() + " distances to landmark vertex" + landmark);
@@ -47,7 +47,7 @@ public class LandmarksProcessor {
                     var eSecondsRounded = (eSec - (eMin * 60));
                     var eMinRounded = eMin - (eHr * 60);
                     var eHrRounded = eHr - (eDay * 60);
-                    System.out.println("Update: Processed " + i + " vertices, "+ (M.V() - i) + " remaining, elapsed time (" +  eHrRounded +"h "+ eMinRounded + "m "+ eSecondsRounded +"s)");
+                    //System.out.println("Update: Processed " + i + " vertices, "+ (M.V() - i) + " remaining, elapsed time (" +  eHrRounded +"h "+ eMinRounded + "m "+ eSecondsRounded +"s)");
 
                     var linesDoneAvgTime = eMs / i;
                     var rLines = M.V() - i;
@@ -59,7 +59,7 @@ public class LandmarksProcessor {
                     var rSecRounded = (rSec - (rMin * 60));
                     var rMinRounded = rMin - (rHr * 60);
                     var rHrRounded = rHr - (rDay * 60);
-                    System.out.println("Est. time remaining (" +  rHrRounded +"h "+ rMinRounded + "m "+ rSecRounded+"s)" );
+                    //System.out.println("Est. time remaining (" +  rHrRounded +"h "+ rMinRounded + "m "+ rSecRounded+"s)" );
                 }
             }
             bw.close();
@@ -83,9 +83,8 @@ public class LandmarksProcessor {
     }
 
     public static void processRandomLandmarksFromJson(int count, String dir, String file) {
-        var pa  = dir + file;
         var P   = new GraphParser();
-        var M   = P.parseJsonModelReversedEdges(pa);
+        var M   = P.parseGeoJsonToModel(file, true);
         var G   = M.generateGraph();
 
         var dOracle = new DistanceOracle(M);
@@ -100,26 +99,28 @@ public class LandmarksProcessor {
     }
 
     public static void processLandmarksFromJson(int[] list, String dir, String file) {
-        var pa  = dir + file;
         var P   = new GraphParser();
-        var M   = P.parseJsonModelReversedEdges(pa);
+        var M   = P.parseGeoJsonToModel(file, true);
         var G   = M.generateGraph();
         var D   = new Dijkstra();
         var O   = new DistanceOracle(M);
+        var i = 0;
         for(var l : list) {
-            processDistToLandmark(M, G, O, D, l, dir);
+            var fileName = dir+"/landmarks/dist/landmark-dist-"+i+".txt";
+            processDistToLandmark(M, G, O, D, l, fileName);
+            i++;
         }
     }
 
     public static void processRandomLandmarksFromDimacs(int count, String dir) {
         var P   = new GraphParser();
-        var M   = P.parseFromDimacsPath(dir, true);
+        var M   = P.parseFromDimacsPath(dir, true, true);
         var G   = M.generateGraph();
         var D   = new Dijkstra();
         var O   = new DistanceOracle(M);
         var i   = 0;
         for(var l : M.generateRandomLandmarks(count)) {
-            var fileName = dir+"/landmarks/dist/landmark-dist-"+i+".txt";
+            var fileName = "resources/dimacs/"+dir+"/landmarks/dist/landmark-dist-"+i+".txt";
             processDistToLandmark(M, G, O, D, l, fileName);
             i++;
         }
@@ -127,27 +128,75 @@ public class LandmarksProcessor {
 
     public static void processLandmarksFromDimacs(int[] list, String dir) {
         var P   = new GraphParser();
-        var M   = P.parseFromDimacsPath(dir, true);
+        var M   = P.parseFromDimacsPath(dir, true, true);
         var G   = M.generateGraph();
         var D   = new Dijkstra();
         var O   = new DistanceOracle(M);
         var i   = 0;
         for(var l : list) {
-            var fileName = dir+"/landmarks/dist/landmark-dist-"+i+".txt";
+            var fileName = "resources/dimacs/"+dir+"/landmarks/dist/landmark-dist-"+i+".txt";
             processDistToLandmark(M, G, O, D, l, fileName);
             i++;
         }
     }
 
     public static void main(String[] args) {
-        processRandomLandmarksFromDimacs(32, "fla");
+        //processRandomLandmarksFromDimacs(64, "cal");
+/*
 
-        /*processLandmarksFromDimacs(
-               new int[] {1041107, 1383, 246729, 755529, 634661, 179673, 925834, 165624, 977155, 289620, 1613, 1058300, 889217, 49092, 579684, 269613},
+        processLandmarksFromDimacs(
+               new int[] {1041058,
+                       226263,
+                       266720,
+                       49111,
+                       384157,
+                       763912,
+                       112211,
+                       579684,
+                       633522,
+                       594127,
+                       632987,
+                       178535,
+                       188942,
+                       447937,
+                       136580,
+                       510548,
+                       813123,
+                       784641,
+                       305089,
+                       490147,
+                       206345,
+                       977156,
+                       983215,
+                       270904,
+                       289970,
+                       33574,
+                       657075,
+                       248907,
+                       245664,
+                       1051510,
+                       1047915,
+                       1021778},
                 "fla"
-        );*/
+        );
+*/
 
-        //processRandomLandmarksFromJson(16, "resources/json/hil/", "hil.json");
-        //processLandmarksFromJson(new int[] {22667, 28460, 8231, 20792, 9840, 26338, 8422, 3703, 1962, 22583, 27380, 18166, 15417, 1757, 14, 22970}, "resources/json/hil/", "hil.json");
+        //processRandomLandmarksFromJson(64, "resources/geojson/hil", "resources/geojson/hil/hil.geojson");
+        processLandmarksFromJson(new int[] {23617,
+                                            5796,
+                                            8337,
+                                            6294,
+                                            11639,
+                                            25615,
+                                            20597,
+                                            17613,
+                                            25744,
+                                            27808,
+                                            4156,
+                                            7735,
+                                            10633,
+                                            13767,
+                                            13369,
+                                            3085}, "resources/geojson/hil", "resources/geojson/hil/hil.geojson");
     }
 }

@@ -1,0 +1,22 @@
+dijkstra-criteria-distance-default-cal-1
+1
+
+----------------------------Results---------------------------------
+             distance  time (ms) 
+       min      5,291  2337,000
+      mean      5,291  2337,000
+       max      5,291  2337,000
+    stddev        NaN       NaN
+       var        NaN       NaN
+   stddevp      0,000     0,000
+      varp      0,000     0,000
+
+
+
+
+
+--------------------------------------------------------------LaTeX table-------------------------------------------------------------------
+\multirow{2}{8em}{dijkstra-criteria-distance-default-cal-1} & \multirow{2}{4em}{1890815} & \multirow{2}{4em}{4630444} & \multirow{2}{4em}{1}
+&          dist  &      5,291    &      5,291    &      5,291  &        NaN \\ 
+& & & &    time (ms)  &       2337    &       2337    &       2337  &        NaN \\ 
+\hline

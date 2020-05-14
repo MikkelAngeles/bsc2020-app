@@ -363,7 +363,7 @@ export default function DetailsDrawer(props) {
 
             <Dialog onClose={handleCloseChart} aria-labelledby="customized-dialog-title" open={openChart}>
                 <DialogTitle id="customized-dialog-title" onClose={handleCloseChart}>
-                    Data chart for {graphTitle(model.selectedGraph)}
+                    Data chart for {model.selectedGraph}
                 </DialogTitle>
                 <DialogContent dividers>
                     <HistoryChart />

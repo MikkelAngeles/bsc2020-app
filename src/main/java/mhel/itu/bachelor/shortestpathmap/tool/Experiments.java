@@ -33,6 +33,7 @@ public class Experiments {
             if(printProgress) System.out.println(timeStamp() + "#" + i + ": " + q.getSource() + " -> " + q.getTarget() + " in " + (end-start) + "ms");
             i++;
         }
+        System.out.println(timeStamp() + "experiment completed. Creating log file.");
         prettyPintVerboseTable(distArr, elapsedArr);
         printFullLaTeXTable("", n, G.V(), G.E() ,distArr, elapsedArr);
         printToLogFile(title, G.V(), G.E(), distArr, elapsedArr);
@@ -172,7 +173,7 @@ public class Experiments {
 
     public static void spCriteriaGeoJsonExperiment(String title, IShortestPathAlgorithm alg, String fileName, int n, RouteCriterion[] criteria, boolean printProgress) {
         var P   = new GraphParser();
-        var M   = P.parseGeoJsonToModel("resources/geojson/"+fileName+".geojson");
+        var M   = P.parseGeoJsonToModel("resources/geojson/"+fileName+".geojson", false);
         var formatTitle = title+"-"+fileName+"-"+n+"";
         buildSpExperimentWithCriteria(formatTitle, alg, M, n, criteria, printProgress);
     }
@@ -185,6 +186,20 @@ public class Experiments {
                 new In("resources/dimacs/"+dimacsName+"/time.gr"),
                 false);
         var formatTitle = title+"-"+dimacsName+"-"+n+"";
+        buildSpExperimentWithCriteria(formatTitle, alg, M, n, criteria, printProgress);
+    }
+
+    public static void spLandmarksDimacsExperiment(String title, IShortestPathAlgorithm alg, String dimacsName, int n, RouteCriterion[] criteria,  boolean printProgress) {
+        var P   = new GraphParser();
+        var M   = P.parseFromDimacsPath(dimacsName,false, false);
+        var formatTitle = title+"-"+dimacsName+"-"+n+"";
+        buildSpExperimentWithCriteria(formatTitle, alg, M, n, criteria, printProgress);
+    }
+
+    public static void spExperimentFromModel(String title, IShortestPathAlgorithm alg, String modelName, int n, RouteCriterion[] criteria,  boolean printProgress) {
+        var P   = new GraphParser();
+        var M   = P.load(modelName);
+        var formatTitle = title+"-"+modelName+"-"+n+"";
         buildSpExperimentWithCriteria(formatTitle, alg, M, n, criteria, printProgress);
     }
 
@@ -202,15 +217,28 @@ public class Experiments {
         //spDimacsExperiment("astar-1", new Astar(1), "fla", 1000, true);
         //spDimacsExperiment("astar-10", new Astar(10), "fla", 1000, true);
         //spDimacsExperiment("astar-100", new Astar(100), "fla", 1000, true);
+        //var criteria = new RouteCriterion[1];
+        //criteria[0] = new RouteCriterion(EdgeWeightType.TIME, new EdgeProperty("#default", "#default"), 1f);
 
-        var criteria = new RouteCriterion[1];
-        criteria[0] = new RouteCriterion(EdgeWeightType.TIME, new EdgeProperty("#default", "#default"), 1f);
-        //spCriteriaGeoJsonExperiment("dijkstra-criteria-time-default", new Dijkstra(), "hil", 1000, criteria, false);
-        spCriteriaDimacsExperiment("dijkstra-criteria-time-default", new Dijkstra(), "nyc", 1000, criteria, true);
 
-        criteria[0] = new RouteCriterion(EdgeWeightType.DISTANCE, new EdgeProperty("#default", "#default"), 1f);
+
         //spCriteriaGeoJsonExperiment("dijkstra-criteria-time-default", new Dijkstra(), "hil", 1000, criteria, false);
-        spCriteriaDimacsExperiment("dijkstra-criteria-distance-default", new Dijkstra(), "nyc", 1000, criteria, true);
+        //spCriteriaDimacsExperiment("dijkstra-criteria-time-default", new Astar(1), "nyc", 10000, criteria, false);
+
+        //criteria[0] = new RouteCriterion(EdgeWeightType.DISTANCE, new EdgeProperty("#default", "#default"), 1f);
+        //spExperimentFromModel("dijkstra", new Dijkstra(), "hil-64.model", 100000, criteria, false);
+        //spExperimentFromModel("astar-1", new Astar(1), "hil-64.model", 100000, criteria, false);
+        //spExperimentFromModel("astarLandmarks-1", new AstarLandmarks(1), "hil-64.model", 10000, criteria, false);
+
+        //spExperimentFromModel("astarLandmarks-1", new AstarLandmarks(1), "fla-23.model", 1000, criteria, true);
+
+        //spCriteriaGeoJsonExperiment("dijkstra-criteria-time-default", new Dijkstra(), "hil", 1000, criteria, false);
+        //spCriteriaDimacsExperiment("dijkstra", new Dijkstra(), "cal", 100, criteria, false);
+        //spCriteriaDimacsExperiment("astar-1", new Astar(1), "cal", 100, criteria, false);
+        //spCriteriaDimacsExperiment("astarlandmarks-64", new AstarLandmarks(1), "cal", 100, criteria, true);
+        //spLandmarksDimacsExperiment("astarlandmarks-16", new AstarLandmarks(1), "cal", 100, criteria, true);
+        //spCriteriaGeoJsonExperiment("astar-1", new Astar(1), "hil", 10000, criteria, false);
+        //spCriteriaGeoJsonExperiment("astarlandmarks", new AstarLandmarks(1), "hil", 10000, criteria, false);
 
        /* var criteria = new RouteCriterion[1];
         criteria[0] = new RouteCriterion(EdgeWeightType.DISTANCE, new EdgeProperty("foot", "yes"), 0f);
@@ -322,8 +350,8 @@ public class Experiments {
         try {
             var file = "logs/experiments/"+title+".txt";
             var fileObj = new File(file);
-            if (fileObj.createNewFile()) System.out.println("File created: " + fileObj.getName());
-            else System.out.println(fileObj.getName() + " already exists. Overriding.");
+            if (fileObj.createNewFile()) System.out.println(timeStamp() + "File created: " + fileObj.getName());
+            else System.out.println(timeStamp() +  fileObj.getName() + " already exists. Overriding.");
 
             var myWriter = new FileWriter(file);
             var bw = new BufferedWriter(myWriter);

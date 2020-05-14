@@ -56,12 +56,17 @@ export function useSelectionModel (props) {
         setQuery({...query, criteria: rest});
     }
 
+    function clearSelectedCriteria() {
+        setQuery({...query, criteria: []});
+    }
+
     return {
         query,
         checked,
         setChecked,
         selectedPoints,
         clearSelectedPoints,
+        clearSelectedCriteria,
         heuristicsWeight: query.heuristicsWeight,
         setHeuristicsWeight: handleHeuristicWeight,
         setSource: handleSetSource,

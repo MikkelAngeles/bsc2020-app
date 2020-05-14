@@ -2,7 +2,7 @@ import React, {useContext, useEffect, useState} from 'react';
 import {SelectionContext} from "./SelectionContext";
 import axios from "axios";
 import {AlertContext} from "./AlertContext";
-import {algorithmTitle, algorithmUrl, graphTitle, graphUrl} from "./selectionProperties";
+import {algorithmTitle, algorithmUrl} from "./selectionProperties";
 
 const baseUrl = 'http://localhost:8080';
 
@@ -21,7 +21,7 @@ const graphTemplate = {
 export function useMapModel (props) {
     const selectionModel                                = useContext(SelectionContext);
     const alertModel                                    = useContext(AlertContext);
-    const [selectedGraph, setSelectedGraph]             = useState(0);
+    const [selectedGraph, setSelectedGraph]             = useState("");
     const [selectedAlgorithm, setSelectedAlgorithm]     = useState(0);
     const [graph, setGraph]                             = useState(graphTemplate);
     const [route, setRoute]                             = useState(routeTemplate);
@@ -29,6 +29,7 @@ export function useMapModel (props) {
     const [edges, setEdges]                             = useState([]);
     const [properties, setProperties]                   = useState({});
     const [results, setResults]                         = useState([]);
+    const [models, setModels]                            = useState([]);
 
     const boundsHull = [
         [graph.bounds.minX, graph.bounds.minY],
@@ -76,12 +77,12 @@ export function useMapModel (props) {
     }
 
     function loadGraph() {
-        if(isLoading) return;
+        if(isLoading || selectedGraph === "") return;
         setIsLoading(true);
-        alertModel.info("Loading " + graphTitle(selectedGraph) + "");
+        alertModel.info("Loading " + selectedGraph + "");
         selectionModel.clearSelectedPoints();
-
-        let path = baseUrl + graphUrl(selectedGraph);
+        selectionModel.clearSelectedCriteria();
+        let path = baseUrl + "/model/load?modelName="+ selectedGraph;
         setGraph(graphTemplate);
         setResults([]);
         axios.get(path)
@@ -89,7 +90,7 @@ export function useMapModel (props) {
                 if(response.status === 200 && response.data) {
                     let data = response.data;
                     setGraph(data);
-                    alertModel.success("Successfully loaded " + graphTitle(selectedGraph) + "!");
+                    alertModel.success("Successfully loaded " + selectedGraph + "!");
                     loadProperties();
                 }
                 console.log(response);
@@ -115,6 +116,23 @@ export function useMapModel (props) {
             .finally(() => setIsLoading(false))
     }
 
+    function loadModels() {
+        alertModel.info("Loading list of models..");
+
+        axios.get(baseUrl + "/model/all")
+            .then((response) => {
+                if(response.status === 200 && response.data) {
+                    let data = response.data;
+                    setModels(data);
+                    alertModel.success("Successfully loaded list of models");
+                    if(data.length > 0) setSelectedGraph(data[0].fileName);
+                }
+                console.log(response);
+            })
+            .catch((e) => alertModel.error(e.toString()))
+            .finally(() => setIsLoading(false))
+    }
+
     function getRoute() {
         if(isLoading) return;
         let q = selectionModel.query;
@@ -133,7 +151,7 @@ export function useMapModel (props) {
         let resultTemplate = {
             from: q.source,
             to: q.target,
-            graph: graphTitle(selectedGraph),
+            graph: selectedGraph,
             algorithm: algorithmTitle(selectedAlgorithm),
             data: routeTemplate,
             criteria: [selectionModel.criteria]
@@ -172,6 +190,10 @@ export function useMapModel (props) {
         else setEdges([]);
     }, [selectionModel.selectedPoints.nearest]);
 
+    useEffect(() => {
+        if(models.length === 0) loadModels();
+    }, [models]);
+
 
     return {
         graph,
@@ -189,6 +211,7 @@ export function useMapModel (props) {
         getNearestEdgePoints,
         getNearestEdges,
         results,
-        properties
+        properties,
+        models
     }
 }

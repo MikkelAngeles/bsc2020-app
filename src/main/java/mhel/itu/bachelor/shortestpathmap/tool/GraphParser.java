@@ -6,6 +6,7 @@ import com.google.gson.stream.JsonReader;
 import edu.princeton.cs.algs4.Bag;
 import edu.princeton.cs.algs4.In;
 import mhel.itu.bachelor.shortestpathmap.algorithm.DistanceOracle;
+import mhel.itu.bachelor.shortestpathmap.api.dto.ModelInfoDTO;
 import mhel.itu.bachelor.shortestpathmap.model.*;
 import mhel.itu.bachelor.shortestpathmap.model.EdgeProperty;
 
@@ -19,22 +20,23 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static mhel.itu.bachelor.shortestpathmap.tool.Experiments.timeStamp;
+
 public class GraphParser {
     public ParsedGraph pg;
-    public DistanceOracle distanceOracle;
 
     public GraphParser() {}
 
-    public GraphParser(DistanceOracle d) {
-        this.distanceOracle = d;
-    }
+    public DataModel parseFromDimacsPath(String path, boolean reversedEdges, boolean skipLandmarks) {
+        var v = new In("resources/dimacs/"+path+"/vertices.co");
+        var d = new In("resources/dimacs/"+path+"/distance.gr");
+        var t = new In("resources/dimacs/"+path+"/time.gr");
+        var dm = parseDimacsFromIn(v,d,t, reversedEdges);
+        v.close();
+        d.close();
+        t.close();
 
-    public DataModel parseFromDimacsPath(String path, boolean reversedEdges) {
-        var v = "resources/dimacs/"+path+"/vertices.co";
-        var d = "resources/dimacs/"+path+"/distance.gr";
-        var t = "resources/dimacs/"+path+"/time.gr";
-        var dm = parseDimacsFromIn(new In(v), new In(d), new In(t), reversedEdges);
-
+        if(skipLandmarks) return dm;
         var landmarksDist = loadLandmarks("resources/dimacs/"+path+"/landmarks/dist");
         dm.setLandmarksDistanceTable(landmarksDist);
 
@@ -183,6 +185,7 @@ public class GraphParser {
                 map.put(v, d);
             }
             lst.put(id, map);
+            landmarks.close();
         }
         return lst;
     }
@@ -259,7 +262,7 @@ public class GraphParser {
         return dm;
     }
 
-    public DataModel parseGeoJsonToModel(String path) {
+    public DataModel parseGeoJsonToModel(String path, boolean reverseEdges) {
         JsonObject jsonObject = null;
 
         try (var r = new FileReader(path)) { jsonObject = new Gson().fromJson(r, JsonObject.class); }
@@ -326,7 +329,8 @@ public class GraphParser {
                 }
                 else {
                     var dist    = DistanceOracle.haversine(from.getX(), from.getY(), to.getX(), to.getY());
-                    var edgeTo  = new ParsedEdge(from, to, dist, propSet);
+                    var edgeTo  = reverseEdges ? new ParsedEdge(to, from, dist, propSet) : new ParsedEdge(from, to, dist, propSet);
+
                     pg.edges.add(edgeTo);
 
                     //Prevent duplicates.
@@ -338,7 +342,7 @@ public class GraphParser {
                     var oneWay = propSet.contains(new EdgeProperty("oneway", ""));
 
                     if(!oneWay) {
-                        var edgeFrom = new ParsedEdge(to, from, dist, propSet);
+                        var edgeFrom = reverseEdges ? new ParsedEdge(from, to, dist, propSet) : new ParsedEdge(to, from, dist, propSet);
                         pg.edges.add(edgeFrom);
 
                         //Prevent duplicates.
@@ -458,33 +462,95 @@ public class GraphParser {
         }
     }
 
+    //Deserializes the file from "resources/models/"+fileName" to a DataModel
     public static DataModel load(String fileName) {
-        FileOutputStream fileOutputStream = null;
+        System.out.println(timeStamp() + "loading model from " + fileName);
+        long start = System.currentTimeMillis();
         try {
-            var fileInputStream = new FileInputStream("resources/models/yourfile.txt");
-            var objectInputStream = new ObjectInputStream(fileInputStream);
+            var fileInputStream = new FileInputStream("resources/models/"+fileName);
+            var bufferedInputStream = new BufferedInputStream(fileInputStream);
+            var objectInputStream = new ObjectInputStream(bufferedInputStream);
             var p2 = (DataModel) objectInputStream.readObject();
             objectInputStream.close();
+            long end = System.currentTimeMillis();
+            System.out.println(timeStamp() + "Done loading in " + (end-start) + "ms");
             return p2;
         } catch (IOException | ClassNotFoundException e) {
+            System.out.println(timeStamp());
             e.printStackTrace();
         }
         return null;
     }
 
-    public static void save(DataModel dm, String fileName) {
-        FileOutputStream fileOutputStream = null;
+    //Serializes the DataModel in resources/models/fileName
+    public static void save(DataModel dm, String fileName, String modelName, int landmarks, String fileOrigin) {
+        System.out.println(timeStamp() + "saving model to " + fileName);
+        long start = System.currentTimeMillis();
         try {
-            fileOutputStream = new FileOutputStream("resources/models/"+fileName);
-            var objectOutputStream = new ObjectOutputStream(fileOutputStream);
+
+            var fileOutputStream = new FileOutputStream("resources/models/"+fileName+".model");
+            var bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+            var objectOutputStream = new ObjectOutputStream(bufferedOutputStream);
             objectOutputStream.writeObject(dm);
+            objectOutputStream.flush();
+            objectOutputStream.close();
+
+
+            var dto = new ModelInfoDTO();
+            dto.modelName = modelName;
+            dto.fileName = fileName+".model";
+            dto.landmarks = landmarks;
+            dto.fileOrigin = fileOrigin;
+            dto.V = dm.V();
+            dto.E = dm.E();
+
+            fileOutputStream = new FileOutputStream("resources/models/"+fileName+".info");
+            bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+            objectOutputStream = new ObjectOutputStream(bufferedOutputStream);
+            objectOutputStream.writeObject(dto);
             objectOutputStream.flush();
             objectOutputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        long end = System.currentTimeMillis();
+        System.out.println(timeStamp() + "Done saving in " + (end-start) + "ms");
     }
 
+    public static void main(String[] args) {
+        //load("fla-4-landmarks-random");
+
+        System.out.println(timeStamp() + "parsing started");
+        long graphStart = System.currentTimeMillis();
+        var P   = new GraphParser();
+        var M   = P.parseFromDimacsPath("fla",false, false);
+        //var M = P.parseGeoJsonToModel("resources/geojson/hil/hil.geojson", false);
+
+        long graphEnd = System.currentTimeMillis();
+        System.out.println(timeStamp() + "Done parsing in " + (graphEnd - graphStart)+"ms");
+
+        //fla
+        //save(M, "fla-0", "Florida", 0, "dimacs");
+
+        //fla
+        save(M, "fla-23", "Florida", 23, "dimacs");
+
+        //Hil-0
+        //save(M, "hil-0", "Hillerød", 0, "OSM");
+
+        //Hil-16-good
+        //M.setLandmarksDistanceTable(loadLandmarks("resources/geojson/hil/landmarks/dist"));
+        //save(M, "hil-16-good", "Hillerød", 16, "OSM");
+
+        //Hil-64
+        //M.setLandmarksDistanceTable(loadLandmarks("resources/geojson/hil/landmarks/dist"));
+        //save(M, "hil-64", "Hillerød", 64, "OSM");
+    }
+
+
+    ////////////////////////
+    //Deprecated tools
+    ///////////////////////
     public static void exportDataModelToJson(DataModel m, String modelName) throws IOException {
         var gson        = new GsonBuilder().setPrettyPrinting().create();
         var fw          = new FileWriter("resources/json/"+modelName+"/model.json");
@@ -493,8 +559,20 @@ public class GraphParser {
     }
 
     public static DataModel importModelFromJson(String modelName) throws FileNotFoundException {
+        System.out.println(timeStamp() + "importing model from /" + modelName + "/model.json");
+        long start = System.currentTimeMillis();
         var gson = new Gson();
-        var model           = gson.fromJson(new FileReader("resources/json/"+modelName+"/model.json"), JsonObject.class);
+
+        BufferedReader reader = null;
+        try {
+            var fileInputStream = new FileInputStream("resources/json/"+modelName+"/model.json");
+            var bufferedInputStream = new BufferedInputStream(fileInputStream);
+            reader = new BufferedReader(new InputStreamReader(bufferedInputStream));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        var model           = gson.fromJson(reader, JsonObject.class);
         var V               = model.getAsJsonPrimitive("V").getAsInt();
         var E               = model.getAsJsonPrimitive("E").getAsInt();
         var vertices        = gson.fromJson(model.getAsJsonArray("vertices"), SimpleVertex[].class);
@@ -553,6 +631,10 @@ public class GraphParser {
                 counter
         );
 
+        long end = System.currentTimeMillis();
+        System.out.println(timeStamp() + "Done importing in " + (end-start) + "ms");
+
         return m;
     }
+
 }

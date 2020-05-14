@@ -86,7 +86,7 @@ function SimpleDialog(props) {
     const classes = useStyles();
     const { onClose,  open } = props;
     const model = useContext(MapContext);
-    const g = graphs;
+    const g = model.models;
     const selected = model.selectedGraph;
     const handleClose = () => {
         onClose();
@@ -102,13 +102,13 @@ function SimpleDialog(props) {
             <DialogTitle id="simple-dialog-title">Select graph</DialogTitle>
             <List>
                 {g.map((f,k) => (
-                    <ListItem button onClick={() => handleListItemClick(f.id)} key={f.id} selected={selected === f.id}>
+                    <ListItem button onClick={() => handleListItemClick(f.fileName)} key={k} selected={selected === f.fileName}>
                         <ListItemAvatar>
                             <Avatar className={classes.avatar}>
                                 <PersonIcon />
                             </Avatar>
                         </ListItemAvatar>
-                        <ListItemText primary={f.file + " (" + f.type + ")"} secondary={"Vertices: " + f.vertices + ", Edges: " + f.edges + ", Size: " + f.bytes + " mb"} />
+                        <ListItemText primary={f.modelName + " (" + f.fileOrigin + ")" + " (" + f.landmarks + " landmarks)"} secondary={"Vertices: " + f.V + ", Edges: " + f.E + ", Size: " + f.fileSize / 1e+6 + " mb"} />
                     </ListItem>
                 ))}
 
@@ -138,7 +138,7 @@ export default function SelectFileDialog(props) {
     return (
         <div>
             <Button variant="outlined" color="primary" onClick={handleClickOpen}>
-                {graphTitle(model.selectedGraph)}
+                {model.selectedGraph !== "" ? model.selectedGraph :  "Select model"}
             </Button>
             <SimpleDialog selected={model.selectedGraph} open={open} onClose={handleClose} />
         </div>

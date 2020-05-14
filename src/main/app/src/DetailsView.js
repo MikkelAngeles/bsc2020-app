@@ -6,22 +6,14 @@ import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import ListItemText from '@material-ui/core/ListItemText';
 import ListSubheader from '@material-ui/core/ListSubheader';
-import Switch from '@material-ui/core/Switch';
 import WeightIcon from '@material-ui/icons/FitnessCenter';
-
 import AspectIcon from '@material-ui/icons/AspectRatio';
-
 import DirectionsIcon from '@material-ui/icons/Directions';
-import MapIcon from '@material-ui/icons/Map';
 import PlotIcon from '@material-ui/icons/ScatterPlot';
 import InfoIcon from '@material-ui/icons/Info';
 import LandmarksFlag from '@material-ui/icons/OutlinedFlag';
-import {SelectionContext} from "./SelectionContext";
-import TextField from "@material-ui/core/TextField";
-import SelectAlgorithmDialog from "./SelectAlgorithmDialog";
-import SelectFileDialog from "./SelectFileDialog";
 import {MapContext} from "./MapContext";
-import {algorithmTitle, graphTitle} from "./selectionProperties";
+import {algorithmTitle} from "./selectionProperties";
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -91,7 +83,7 @@ export default function DetailsView() {
             <List subheader={<ListSubheader>Graph settings</ListSubheader>} className={classes.root}>
                 <DetailsItem
                     primary     = "Name"
-                    value       = {graphTitle(model.selectedGraph)}
+                    value       = {model.selectedGraph}
                     icon        = {<InfoIcon />}
                 />
                 <DetailsItem

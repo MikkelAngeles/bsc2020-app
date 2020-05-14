@@ -1,8 +1,8 @@
 package mhel.itu.bachelor.shortestpathmap.api;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import edu.princeton.cs.algs4.GrahamScan;
+import edu.princeton.cs.algs4.In;
 import mhel.itu.bachelor.shortestpathmap.algorithm.*;
 import mhel.itu.bachelor.shortestpathmap.api.dto.*;
 import mhel.itu.bachelor.shortestpathmap.model.*;
@@ -10,14 +10,17 @@ import mhel.itu.bachelor.shortestpathmap.tool.*;
 
 import org.springframework.web.bind.annotation.*;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
@@ -35,7 +38,7 @@ public class RouteController {
 
     @GetMapping("/load/geojson/hil")
     public GraphDTO loadGeoJsonHil() {
-        M = P.parseGeoJsonToModel("resources/geojson/hil.geojson");
+        M = P.parseGeoJsonToModel("resources/geojson/hil.geojson", false);
 
         var landmarksDist = P.loadLandmarks("resources/json/hil/landmarks/dist");
         M.setLandmarksDistanceTable(landmarksDist);
@@ -56,7 +59,14 @@ public class RouteController {
 
     @GetMapping("/load/dimacs")
     public GraphDTO loadDimacs(@RequestParam(value = "path") String path) {
-        M = P.parseFromDimacsPath(path, false);
+        M = P.parseFromDimacsPath(path, false, false);
+        D = new DistanceOracle(M);
+        return getGraph();
+    }
+
+    @GetMapping("/model/load")
+    public GraphDTO loadModel(@RequestParam(value = "modelName") String modelName) {
+        M = P.load(modelName);
         D = new DistanceOracle(M);
         return getGraph();
     }
@@ -183,13 +193,42 @@ public class RouteController {
         return dto;
     }
 
+    @GetMapping("/model/all")
+    public List<ModelInfoDTO> getModels() {
+        var dtos = new ArrayList<ModelInfoDTO>();
+        var files = new ArrayList<String>();
+        try (Stream<Path> walk = Files.walk(Paths.get("resources/models"))) {
+            files = (ArrayList<String>) walk.map(x -> x.toString())
+                                            .filter(f -> f.endsWith(".info"))
+                                            .collect(Collectors.toList());
+
+            for(var f : files) {
+
+                var fileInputStream         = new FileInputStream(f);
+                var bufferedInputStream     = new BufferedInputStream(fileInputStream);
+                var objectInputStream       = new ObjectInputStream(bufferedInputStream);
+                var dto                     = (ModelInfoDTO) objectInputStream.readObject();
+                var file                    = new File("resources/models/"+dto.fileName);
+
+                fileInputStream.close();
+                bufferedInputStream.close();
+                objectInputStream.close();
+
+                dto.fileSize = file.length();
+                dtos.add(dto);
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return dtos;
+    }
+
 
     /////////////////////////////////////////////////////////////////////////////////////////////
     /*Route repository - move to it's own class and control it with an injected interface later*/
     /////////////////////////////////////////////////////////////////////////////////////////////
     public GraphDTO getGraph() {
         G = M.generateGraph();
-        M.generateRandomLandmarks(16);
         var dto = new GraphDTO();
         dto.E = M.E();
         dto.V = M.V();
