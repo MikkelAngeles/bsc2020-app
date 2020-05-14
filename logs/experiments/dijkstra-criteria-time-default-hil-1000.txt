@@ -1,22 +1,3 @@
-dijkstra-criteria-time-default-hil-1000
-1000
-
-----------------------------Results---------------------------------
-             distance  time (ms) 
-       min      0,000     2,000
-      mean      1,049    10,754
-       max     14,050   104,000
-    stddev      1,570     4,954
-       var      2,465    24,542
-   stddevp      1,569     4,952
-      varp      2,463    24,517
-
-
-
-
-
---------------------------------------------------------------LaTeX table-------------------------------------------------------------------
-\multirow{2}{8em}{dijkstra-criteria-time-default-hil-1000} & \multirow{2}{4em}{29711} & \multirow{2}{4em}{64322} & \multirow{2}{4em}{1000}
-&          dist  &      0,000    &      1,049    &     14,050  &      1,570 \\ 
-& & & &    time (ms)  &          2    &         11    &        104  &          5 \\ 
-\hline
+version https://git-lfs.github.com/spec/v1
+oid sha256:2bbc42353e5e5880d38c91d8dc3c0ca34f3b07e4b3f47f25791020280aab9ebd
+size 842

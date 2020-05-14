@@ -1,22 +1,3 @@
-dijkstra-criteria-distance-default-cal-1
-1
-
-----------------------------Results---------------------------------
-             distance  time (ms) 
-       min      5,291  2337,000
-      mean      5,291  2337,000
-       max      5,291  2337,000
-    stddev        NaN       NaN
-       var        NaN       NaN
-   stddevp      0,000     0,000
-      varp      0,000     0,000
-
-
-
-
-
---------------------------------------------------------------LaTeX table-------------------------------------------------------------------
-\multirow{2}{8em}{dijkstra-criteria-distance-default-cal-1} & \multirow{2}{4em}{1890815} & \multirow{2}{4em}{4630444} & \multirow{2}{4em}{1}
-&          dist  &      5,291    &      5,291    &      5,291  &        NaN \\ 
-& & & &    time (ms)  &       2337    &       2337    &       2337  &        NaN \\ 
-\hline
+version https://git-lfs.github.com/spec/v1
+oid sha256:db21d1545d88122c6b3d49f4c3616a513a5e0d85e19c080cbda482c70ab6e296
+size 842

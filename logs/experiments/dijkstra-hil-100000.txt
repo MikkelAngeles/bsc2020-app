@@ -1,13 +1,3 @@
-18:47:43: Running 100000 queries, each with a random source s and target t.
-             distance  time (ms) 
-       min      0.000     1.000
-      mean      1.083     9.345
-       max     18.273   160.000
-    stddev      1.553     4.078
-       var      2.412    16.627
-   stddevp      1.553     4.078
-      varp      2.412    16.626
-\multirow{2}{8em}{} & \multirow{2}{4em}{29712} & \multirow{2}{4em}{128645} & \multirow{2}{4em}{100000}
-&          dist  &      0.000    &      1.083    &     18.273  &      1.553 \\ 
-& & & &    time (ms)  &          1    &          9    &        160  &          4 \\ 
-\hline
+version https://git-lfs.github.com/spec/v1
+oid sha256:9cd343821f3a4e1084beb5038cdcb194f6af6bcc5b1dabf47fdda141ee8e8061
+size 609

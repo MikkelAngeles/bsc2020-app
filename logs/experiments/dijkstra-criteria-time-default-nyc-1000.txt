@@ -1,22 +1,3 @@
-dijkstra-criteria-time-default-nyc-1000
-1000
-
-----------------------------Results---------------------------------
-             distance  time (ms) 
-       min      0,079   151,000
-      mean      3,647   165,288
-       max      9,889   369,000
-    stddev      1,797    21,380
-       var      3,230   457,094
-   stddevp      1,796    21,369
-      varp      3,227   456,637
-
-
-
-
-
---------------------------------------------------------------LaTeX table-------------------------------------------------------------------
-\multirow{2}{8em}{dijkstra-criteria-time-default-nyc-1000} & \multirow{2}{4em}{264346} & \multirow{2}{4em}{730100} & \multirow{2}{4em}{1000}
-&          dist  &      0,079    &      3,647    &      9,889  &      1,797 \\ 
-& & & &    time (ms)  &        151    &        165    &        369  &         21 \\ 
-\hline
+version https://git-lfs.github.com/spec/v1
+oid sha256:95ca3b9754ad8f67ebf65cc7337e7f0907929f5140ba805e79bee0fb75fc3e9a
+size 844

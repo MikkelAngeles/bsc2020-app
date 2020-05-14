@@ -1,22 +1,3 @@
-astar-10-fla-dimacs-1000-queries
-1000
-
-----------------------------Results---------------------------------
-             distance  time (ms) 
-       min      0,002    65,000
-      mean      7,727   394,085
-       max     27,480   972,000
-    stddev      4,866   188,590
-       var     23,681 35566,188
-   stddevp      4,864   188,496
-      varp     23,657 35530,622
-
-
-
-
-
---------------------------------------------------------------LaTeX table-------------------------------------------------------------------
-\multirow{2}{8em}{astar-10-fla-dimacs-1000-queries} & \multirow{2}{4em}{1070377} & \multirow{2}{4em}{5375805} & \multirow{2}{4em}{1000}
-&          dist  &      0,002    &      7,727    &     27,480  &      4,866 \\ 
-& & & &    time (ms)  &         65    &        394    &        972  &        189 \\ 
-\hline
+version https://git-lfs.github.com/spec/v1
+oid sha256:4cfc98d1626c5026813070c9187e10ec616d4dd683df7ab5e9969e774346ab5b
+size 832

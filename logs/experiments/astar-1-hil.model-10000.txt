@@ -1,22 +1,3 @@
-astar-1-hil.model-10000
-10000
-
-----------------------------Results---------------------------------
-             distance  time (ms) 
-       min      0,000     1,000
-      mean      1,103     5,050
-       max     14,613    71,000
-    stddev      1,584     4,268
-       var      2,509    18,214
-   stddevp      1,584     4,268
-      varp      2,509    18,212
-
-
-
-
-
---------------------------------------------------------------LaTeX table-------------------------------------------------------------------
-\multirow{2}{8em}{astar-1-hil.model-10000} & \multirow{2}{4em}{29711} & \multirow{2}{4em}{64322} & \multirow{2}{4em}{10000}
-&          dist  &      0,000    &      1,103    &     14,613  &      1,584 \\ 
-& & & &    time (ms)  &          1    &          5    &         71  &          4 \\ 
-\hline
+version https://git-lfs.github.com/spec/v1
+oid sha256:7fc1aa590faceef210aa857a71be5e3efd5d803a77a0ab73ec416724893221d7
+size 812
